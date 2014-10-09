@@ -1,0 +1,6 @@
+configuration HeartrateServiceC
+{
+}
+implementation
+{
+}
