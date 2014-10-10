@@ -7,8 +7,6 @@ implementation
 	components MainC, DemoC, HeartrateServiceC;
 	components new BLELocalCharC() as StartStopChar;
 
-	DemoC.StartStopChar->StartStopChar;
-
-	/*Remaining Wirings*/
-
+        DemoC.HeartrateService->HeartrateServiceC;
+	HeartrateServiceC.StartStopChar->StartStopChar;
 }
