@@ -1,7 +1,7 @@
 module DemoC
 {
   uses interface BLEPeripheral;
-  uses interface BLELocalService as HeartrateService;
+  uses interface BLELocalService as DemoService;
   uses interface Boot;
 }
 
