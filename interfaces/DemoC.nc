@@ -1,8 +1,10 @@
 module DemoC
 {
   uses interface BLEPeripheral;
-  uses interface BLELocalService as DemoService;
+  //uses interface BLELocalService as DemoService;
+  uses interface BLELocalChar as ObserverChar;
   uses interface Boot;
+  uses interface 
 }
 
 implementation
