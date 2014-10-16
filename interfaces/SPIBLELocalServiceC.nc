@@ -1,4 +1,4 @@
-generic configuration SPIBLEServiceCharC(){
+generic configuration SPIBLELocalServiceC(){
   provides interface NrfBleService;
 }
 implementation

@@ -4,6 +4,7 @@ module NrfBleP
 {
   provides interface BLELocalChar as BLELocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
+  uses interface FastSpiByte as Spi;
 }
 implementation
 {
@@ -50,14 +51,17 @@ implementation
 
   command error_t BLELocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
   {
-    //set txBuf
-    uint8_t* txBuf = NULL;
-    //Set rxBuf
-    uint8_t* rxBuf = NULL;
-    //append header
-    //set length
-    uint16_t packet_length = 10;
-    //return call Spi.send(txBuf, rxBuf, packet_length);
+    uint8_t* rxBuf;
+    uint8_t header_byte=0x00;
+    uint8_t i=0;
+
+    call Spi.splitWrite(header_byte);
+
+    for(i=0; i < len; i++)
+    {
+      rxBuf[i]= call Spi.splitReadWrite(value[i]);
+    }
+
     return SUCCESS;
   }
 

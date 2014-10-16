@@ -1,6 +1,7 @@
 module SPIBLEPeripheralC
 {
   provides interface BLEPeripheral;
+  uses interface FastSpiByte as Spi;
 }
 implementation
 {
