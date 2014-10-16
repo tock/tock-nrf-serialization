@@ -5,6 +5,7 @@ interface BLELocalChar
 
   command void setUUID(uuid_t UUID);
   command uuid_t getUUID();
+  command uint8_t getHandle();
 
   command error_t setValue(uint16_t len, uint8_t const *value);
   command error_t getValue();

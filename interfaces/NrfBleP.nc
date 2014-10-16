@@ -2,7 +2,8 @@
 
 module NrfBleP
 {
-  provides interface BLELocalChar as BLELocalChar[uint8_t num];
+  provides interface BLELocalChar as BLELocalChar[uint8_t];
+  provides interface NrfBleService as NrfBleService[uint8_t];
 }
 implementation
 {
@@ -19,20 +20,24 @@ implementation
 
   Char_t chars[NUM_CHARS];
 
-  void setUUID(uint8_t handle, uuid_t UUID) {
+  void setCharUUID(uint8_t handle, uuid_t UUID) {
     chars[handle].UUID = UUID;
   }
 
-  uuid_t getUUID(uint16_t handle) {
+  uuid_t getCharUUID(uint16_t handle) {
     return chars[handle].UUID;
   }
 
+  command uint8_t BLELocalChar.getHandle[uint8_t handle]() {
+    return handle;
+  }
+
   command void BLELocalChar.setUUID[uint8_t handle](uuid_t UUID) {
-    setUUID(handle, UUID);
+    setCharUUID(handle, UUID);
   }
 
   command uuid_t BLELocalChar.getUUID[uint8_t handle]() {
-    return getUUID(handle);
+    return getCharUUID(handle);
   }
 
   command error_t BLELocalChar.setValue[uint8_t handle](uint16_t len, uint8_t const *value){
@@ -57,6 +62,17 @@ implementation
   }
 
   command error_t BLELocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
+    return SUCCESS;
+  }
+
+  command error_t NrfBleService.createService[uint8_t handle](uuid_t UUID) {
+    //TODO(alevy): add service over spi
+    return SUCCESS;
+  }
+
+
+  command error_t NrfBleService.addCharacteristic[uint8_t service_handle](uuid_t UUID, uint8_t char_handle)
+  {
     return SUCCESS;
   }
 }
