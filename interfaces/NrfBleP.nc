@@ -2,8 +2,9 @@
 
 module NrfBleP
 {
-  provides interface BLELocalChar as BLELocalChar[uint8_t];
+  provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
+  uses interface FastSpiByte as Spi;
 }
 implementation
 {
@@ -29,40 +30,43 @@ implementation
     return chars[handle].UUID;
   }
 
-  command uint8_t BLELocalChar.getHandle[uint8_t handle]() {
+  command uint8_t BleLocalChar.getHandle[uint8_t handle]() {
     return handle;
   }
 
-  command void BLELocalChar.setUUID[uint8_t handle](uuid_t UUID) {
+  command void BleLocalChar.setUUID[uint8_t handle](uuid_t UUID) {
     setCharUUID(handle, UUID);
   }
 
-  command uuid_t BLELocalChar.getUUID[uint8_t handle]() {
+  command uuid_t BleLocalChar.getUUID[uint8_t handle]() {
     return getCharUUID(handle);
   }
 
-  command error_t BLELocalChar.setValue[uint8_t handle](uint16_t len, uint8_t const *value){
+  command error_t BleLocalChar.setValue[uint8_t handle](uint16_t len, uint8_t const *value){
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.getValue[uint8_t handle]() {
+  command error_t BleLocalChar.getValue[uint8_t handle]() {
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
+  command error_t BleLocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
   {
-    //set txBuf
-    uint8_t* txBuf = NULL;
-    //Set rxBuf
-    uint8_t* rxBuf = NULL;
-    //append header
-    //set length
-    uint16_t packet_length = 10;
-    //return call Spi.send(txBuf, rxBuf, packet_length);
+    uint8_t* rxBuf;
+    uint8_t header_byte=0x00;
+    uint8_t i=0;
+
+    call Spi.splitWrite(header_byte);
+
+    for(i=0; i < len; i++)
+    {
+      rxBuf[i]= call Spi.splitReadWrite(value[i]);
+    }
+
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
+  command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
     return SUCCESS;
   }
 

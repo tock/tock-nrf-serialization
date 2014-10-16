@@ -1,8 +1,8 @@
 module DemoC
 {
-  uses interface BLEPeripheral;
+  uses interface BlePeripheral;
   uses interface Boot;
-  uses interface BLELocalService as Observer;
+  uses interface BleLocalService as Observer;
 }
 
 implementation
@@ -10,22 +10,22 @@ implementation
   event void Boot.booted()
   {
     call Observer.configure();
-    call BLEPeripheral.startAdvertising();
+    call BlePeripheral.startAdvertising();
   }
 
-  event void BLEPeripheral.connected()
+  event void BlePeripheral.connected()
   {
     // call HRM.start(1000); // By default, start once a second
   }
 
-  event void BLEPeripheral.disconnected()
+  event void BlePeripheral.disconnected()
   {
-    call BLEPeripheral.startAdvertising();
+    call BlePeripheral.startAdvertising();
   }
 
-  event void BLEPeripheral.advertisingTimeout()
+  event void BlePeripheral.advertisingTimeout()
   {
-    call BLEPeripheral.startAdvertising();
+    call BlePeripheral.startAdvertising();
   }
 
 }
