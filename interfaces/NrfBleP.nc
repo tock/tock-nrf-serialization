@@ -2,7 +2,7 @@
 
 module NrfBleP
 {
-  provides interface BLELocalChar as BLELocalChar[uint8_t];
+  provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
   uses interface FastSpiByte as Spi;
 }
@@ -29,27 +29,27 @@ implementation
     return chars[handle].UUID;
   }
 
-  command uint8_t BLELocalChar.getHandle[uint8_t handle]() {
+  command uint8_t BleLocalChar.getHandle[uint8_t handle]() {
     return handle;
   }
 
-  command void BLELocalChar.setUUID[uint8_t handle](uuid_t UUID) {
+  command void BleLocalChar.setUUID[uint8_t handle](uuid_t UUID) {
     setCharUUID(handle, UUID);
   }
 
-  command uuid_t BLELocalChar.getUUID[uint8_t handle]() {
+  command uuid_t BleLocalChar.getUUID[uint8_t handle]() {
     return getCharUUID(handle);
   }
 
-  command error_t BLELocalChar.setValue[uint8_t handle](uint16_t len, uint8_t const *value){
+  command error_t BleLocalChar.setValue[uint8_t handle](uint16_t len, uint8_t const *value){
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.getValue[uint8_t handle]() {
+  command error_t BleLocalChar.getValue[uint8_t handle]() {
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
+  command error_t BleLocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
   {
     uint8_t* rxBuf;
     uint8_t header_byte=0x00;
@@ -65,7 +65,7 @@ implementation
     return SUCCESS;
   }
 
-  command error_t BLELocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
+  command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
     return SUCCESS;
   }
 

@@ -1,4 +1,4 @@
-generic configuration SPIBLELocalServiceC(){
+generic configuration SpiBleLocalServiceC(){
   provides interface NrfBleService;
 }
 implementation

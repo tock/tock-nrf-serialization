@@ -1,4 +1,4 @@
-configuration HplNRF51822C
+configuration HplnRF51822C
 {
   provides interface Resource as SpiResource;
   provides interface FastSpiByte;

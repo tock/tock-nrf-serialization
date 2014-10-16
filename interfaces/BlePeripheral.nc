@@ -1,7 +1,7 @@
 //Header Files
 //
 
-interface BLEPeripheral
+interface BlePeripheral
 {
   command error_t startAdvertising();
 

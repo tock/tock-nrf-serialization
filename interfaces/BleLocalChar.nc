@@ -1,6 +1,6 @@
 #include "ble.h"
 
-interface BLELocalChar
+interface BleLocalChar
 {
 
   command void setUUID(uuid_t UUID);

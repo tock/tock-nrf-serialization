@@ -2,8 +2,8 @@
 
 module ObserverC
 {
-  provides interface BLELocalService;
-  uses interface BLELocalChar as ObserverChar;
+  provides interface BleLocalService;
+  uses interface BleLocalChar as ObserverChar;
   uses interface NrfBleService as ObserverImpl;
 }
 
@@ -12,7 +12,7 @@ implementation
 
   uuid_t myuuid = 0x2108;
 
-  command error_t BLELocalService.configure() {
+  command error_t BleLocalService.configure() {
     call ObserverImpl.createService(myuuid);
     call ObserverImpl.addCharacteristic(call ObserverChar.getUUID(),
       call ObserverChar.getHandle());
