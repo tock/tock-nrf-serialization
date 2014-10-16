@@ -1,15 +1,16 @@
 configuration DemoAppC
 {
-
 }
 implementation
 {
-	components MainC, DemoC, SpiPacket;
-	//components new BLELocalServiceC() as DemoServiceC;
-	components new ObserverCharC(unique("UQ_LOCAL_CHARACTERISTIC")) as ObserverChar;
-	DemoC.ObserverChar->ObserverChar;
-	ObserverCharC.Spi->SpiPacket;
-	//components new BLEPeripheral as MyPeripheral;
-    //DemoC.BLEPeripheral->MyPeripheral;
+
+  components MainC, DemoC, SPIBLEPeripheralC, ObserverC;
+  components new SPIBLELocalCharC() as ObserverChar;
+
+  ObserverC.ObserverChar -> ObserverChar;
+
+  DemoC.Boot -> MainC.Boot;
+  DemoC.BLEPeripheral -> SPIBLEPeripheralC;
+  DemoC.Observer -> ObserverC;
 }
 

@@ -1,7 +1,7 @@
 generic module ObserverCharC(uint8_t handle){
   //provides interface BLELocalSerivce;
   provides interface BLELocalChar as Observer[uint8_t handle];
-  uses interface SpiPacket as Spi;  
+  uses interface SpiPacket as Spi;
 }
 
 implementation
@@ -25,7 +25,7 @@ implementation
   {
   	return od.UUID;
   }
-  
+
   command error_t Observer.setValue[uint8_t handle](uint16_t len, uint8_t const *value){ return; }
   command error_t Observer.getValue[uint8_t handle]() { return; }
 
@@ -35,13 +35,13 @@ implementation
   	uint8_t* txBuf = NULL;
   	//Set rxBuf
   	uint8_t* rxBuf = NULL;
-  	//append header 
+  	//append header
   	//set length
   	uint16_t packet_length = 10;
   	return call Spi.send(txBuf, rxBuf, packet_length);
   }
 
- 
+
   command error_t Observer.indicate[uint8_t handle](uint16_t len, uint8_t const *value){return;}
 
   async event void Spi.sendDone( uint8_t* txBuf, uint8_t* rxBuf, uint16_t len, error_t error )
