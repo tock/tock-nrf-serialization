@@ -11,6 +11,7 @@ implementation
   enum
   {
     NUM_CHARS = uniqueCount("SPI_BLE_LOCAL_CHAR_HANDLE")
+    NUM_SERVICES = uniqueCount("SPI_BLE_LOCAL_SERVICE_HANDLE")
   };
 
   typedef struct
