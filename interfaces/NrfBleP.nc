@@ -5,9 +5,11 @@ module NrfBleP
   provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
   uses interface FastSpiByte as Spi;
+  uses interface HplSam4lSPIChannel;
 }
 implementation
 {
+  call HplSam4lSPIChannel.setMode(0,1);
 
   enum
   {
