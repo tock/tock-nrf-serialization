@@ -2,7 +2,7 @@ configuration HplnRF51822C
 {
   provides interface Resource as SpiResource;
   provides interface FastSpiByte;
-  provides interface HplSam4lSPIChannel	
+  //provides interface HplSam4lSPIChannel;
 }
 implementation
 {

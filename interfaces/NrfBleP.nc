@@ -1,19 +1,21 @@
+// NRF Spi interface
+
 #include "ble.h"
 
 module NrfBleP
 {
   provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
-  uses interface FastSpiByte as Spi;
-  uses interface HplSam4lSPIChannel;
+  uses interface SpiPacket as Spi;
+  //uses interface HplSam4lSPIChannel;
 }
 implementation
 {
-  call HplSam4lSPIChannel.setMode(0,1);
+  //call HplSam4lSPIChannel.setMode(0,1);
 
   enum
   {
-    NUM_CHARS = uniqueCount("SPI_BLE_LOCAL_CHAR_HANDLE")
+    NUM_CHARS = uniqueCount("SPI_BLE_LOCAL_CHAR_HANDLE"),
     NUM_SERVICES = uniqueCount("SPI_BLE_LOCAL_SERVICE_HANDLE")
   };
 
@@ -57,13 +59,6 @@ implementation
     uint8_t* rxBuf;
     uint8_t header_byte=0x00;
     uint8_t i=0;
-
-    call Spi.splitWrite(header_byte);
-
-    for(i=0; i < len; i++)
-    {
-      rxBuf[i]= call Spi.splitReadWrite(value[i]);
-    }
 
     return SUCCESS;
   }
