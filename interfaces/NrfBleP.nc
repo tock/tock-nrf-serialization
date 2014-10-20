@@ -1,17 +1,29 @@
-// NRF Spi interface
+/**
+ */
+
+/**
+ * NRF Spi interface
+ */
 
 #include "ble.h"
 
 module NrfBleP
 {
+  provides interface BlePeripheral;
   provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
-  uses interface SpiPacket as Spi;
-  //uses interface HplSam4lSPIChannel;
+  uses interface HplSam4lUSART as SpiHPL;
+  uses interface SpiPacket;
+  uses interface GeneralIO as CS;
+  uses interface GeneralIO as Led;
+  uses interface GeneralIO as IntPort;
+  uses interface GpioInterrupt as Int;
 }
 implementation
 {
-  //call HplSam4lSPIChannel.setMode(0,1);
+
+  uint8_t txbuf[80];
+  uint8_t rxbuf[80];
 
   enum
   {
@@ -77,4 +89,53 @@ implementation
   {
     return SUCCESS;
   }
+
+  command error_t BlePeripheral.startAdvertising() {
+    uint8_t txlen;
+    txlen = snprintf(txbuf, 80, "Welcome!") + 1;
+    call CS.clr();
+    call SpiPacket.send(txbuf, rxbuf, txlen);
+    return SUCCESS;
+  }
+
+  command error_t BlePeripheral.stopAdvertising() {
+    //TODO(alevy): implement nrf stop advertising over SPI
+    return SUCCESS;
+  }
+
+  command void BlePeripheral.initialize()
+  {
+    call SpiHPL.enableUSARTPin(USART2_TX_PC12);
+    call SpiHPL.enableUSARTPin(USART2_RX_PC11);
+    call SpiHPL.enableUSARTPin(USART2_CLK_PA18);
+    call SpiHPL.initSPIMaster();
+    call SpiHPL.setSPIMode(0,0);
+    call SpiHPL.setSPIBaudRate(20000);
+    call SpiHPL.enableTX();
+    call SpiHPL.enableRX();
+
+    call CS.makeOutput();
+    call CS.set();
+    call IntPort.makeInput();
+    call Int.enableRisingEdge();
+  }
+
+  async event void Int.fired()
+  {
+    call Led.set();
+    call CS.clr();
+    call SpiPacket.send(NULL, rxbuf, sizeof(rxbuf));
+  }
+
+  async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
+                                      uint16_t len, error_t error) {
+    call CS.set();
+    if (rxBuf != NULL) {
+      call Led.clr();
+      if(rxBuf[0] > 0) {
+        signal BlePeripheral.ready();
+      }  
+    }
+  }
 }
+

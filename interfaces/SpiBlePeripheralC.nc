@@ -1,7 +1,7 @@
 module SpiBlePeripheralC
 {
   provides interface BlePeripheral;
-  uses interface FastSpiByte as Spi;
+  uses interface SpiPacket as Spi;
 }
 implementation
 {
