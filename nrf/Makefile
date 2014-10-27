@@ -4,6 +4,8 @@ APPLICATION_SRCS = $(notdir $(wildcard ./*.c))
 APPLICATION_SRCS += simple_uart.c
 APPLICATION_SRCS += nrf_delay.c
 APPLICATION_SRCS += spi_slave.c
+APPLICATION_SRCS += sd_common/softdevice_handler.c
+APPLICATION_SRCS += ble/ble_advdata.c
 
 DEVICE = NRF51
 

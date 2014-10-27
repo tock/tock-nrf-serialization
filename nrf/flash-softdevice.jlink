@@ -1,5 +1,0 @@
-w4 4001e504 1
-loadbin "_build/s110_nrf51822_7.1.0_softdevice.bin" 0
-r
-g
-exit

@@ -15,7 +15,6 @@ module NrfBleP
   uses interface HplSam4lUSART as SpiHPL;
   uses interface SpiPacket;
   uses interface GeneralIO as CS;
-  uses interface GeneralIO as Led;
   uses interface GeneralIO as IntPort;
   uses interface GpioInterrupt as Int;
 }
@@ -24,6 +23,8 @@ implementation
 
   uint8_t txbuf[80];
   uint8_t rxbuf[80];
+  bool spiready = 0;
+  bool spiqueued = 0;
 
   enum
   {
@@ -91,10 +92,13 @@ implementation
   }
 
   command error_t BlePeripheral.startAdvertising() {
-    uint8_t txlen;
-    txlen = snprintf(txbuf, 80, "Welcome!") + 1;
     call CS.clr();
-    call SpiPacket.send(txbuf, rxbuf, txlen);
+    txbuf[0] = 2;
+    if (spiready) {
+      call SpiPacket.send(txbuf, rxbuf, 1);
+    } else {
+      spiqueued = 1;
+    }
     return SUCCESS;
   }
 
@@ -118,23 +122,46 @@ implementation
     call CS.set();
     call IntPort.makeInput();
     call Int.enableRisingEdge();
+    call Int.enableFallingEdge();
+    txbuf[0] = 1;
+    spiqueued = 1;
   }
 
   async event void Int.fired()
   {
-    call Led.set();
-    call CS.clr();
-    call SpiPacket.send(NULL, rxbuf, sizeof(rxbuf));
+    if (spiqueued) {
+      call CS.clr();
+      call SpiPacket.send(txbuf, rxbuf, 1);
+      spiready = 0;
+    } else {
+      spiready = 1;
+    }
+  }
+
+  task void ready() {
+    signal BlePeripheral.ready();
+  }
+
+  task void connected() {
+    signal BlePeripheral.connected();
   }
 
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
     call CS.set();
-    if (rxBuf != NULL) {
-      call Led.clr();
-      if(rxBuf[0] > 0) {
-        signal BlePeripheral.ready();
-      }  
+    if (error == SUCCESS) {
+      if (rxBuf[0] & 0x1) { // Odd opcode for notifications
+        switch (rxBuf[0]) {
+          case 1:
+            post ready();
+            break;
+          case 3:
+            post connected();
+            break;
+        }
+      } else { // Even opcodes for responses
+
+      }
     }
   }
 }

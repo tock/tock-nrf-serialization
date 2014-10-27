@@ -20,7 +20,6 @@ implementation
   NrfBleP.CS -> HplSam4lIOC.PC07;
   NrfBleP.IntPort -> HplSam4lIOC.PA17;
   NrfBleP.Int -> HplSam4lIOC.PA17IRQ;
-  NrfBleP.Led -> HplSam4lIOC.PC10;
 
   DemoC.Boot -> MainC.Boot;
   DemoC.BlePeripheral -> NrfBleP;

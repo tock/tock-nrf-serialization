@@ -25,13 +25,12 @@ implementation
 
   event void BlePeripheral.ready()
   {
-    call Led.set();
-    //call BlePeripheral.startAdvertising();
+    call BlePeripheral.startAdvertising();
   }
 
   event void BlePeripheral.connected()
   {
-    // call HRM.start(1000); // By default, start once a second
+    call Led.set();
   }
 
   event void BlePeripheral.disconnected()
