@@ -1,8 +1,0 @@
-<metrics>
-  <ram>4</ram>
-  <storm-ram>4</storm-ram>
-  <flash>6708</flash>
-  <storm-flash>6708</storm-flash>
-  <stack>4628</stack>
-  <storm-stack>4628</storm-stack>
-</metrics>
