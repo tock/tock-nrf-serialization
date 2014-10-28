@@ -1,0 +1,8 @@
+<metrics>
+  <ram>4</ram>
+  <storm-ram>4</storm-ram>
+  <flash>6896</flash>
+  <storm-flash>6896</storm-flash>
+  <stack>4636</stack>
+  <storm-stack>4636</storm-stack>
+</metrics>
