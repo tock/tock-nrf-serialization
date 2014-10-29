@@ -23,8 +23,6 @@ implementation
 
   uint8_t txbuf[80];
   uint8_t rxbuf[80];
-  bool spiready = 0;
-  bool spiqueued = 0;
 
   enum
   {
@@ -92,14 +90,9 @@ implementation
   }
 
   command error_t BlePeripheral.startAdvertising() {
-    call CS.clr();
     txbuf[0] = 2;
-    if (spiready) {
-      call SpiPacket.send(txbuf, rxbuf, 1);
-    } else {
-      spiqueued = 1;
-    }
-    return SUCCESS;
+    call CS.clr();
+    call SpiPacket.send(txbuf, rxbuf, 5);
   }
 
   command error_t BlePeripheral.stopAdvertising() {
@@ -122,21 +115,15 @@ implementation
     call CS.set();
     call IntPort.makeInput();
     call Int.enableRisingEdge();
-    call Int.enableFallingEdge();
     txbuf[0] = 1;
-    spiqueued = 1;
   }
 
   async event void Int.fired()
   {
-    if (spiqueued) {
-      call CS.clr();
-      call SpiPacket.send(txbuf, rxbuf, 1);
-      spiready = 0;
-    } else {
-      spiready = 1;
-    }
+    call CS.clr();
+    call SpiPacket.send(NULL, rxbuf, 5);
   }
+
 
   task void ready() {
     signal BlePeripheral.ready();
@@ -146,10 +133,22 @@ implementation
     signal BlePeripheral.connected();
   }
 
+  task void disconnected() {
+    signal BlePeripheral.disconnected();
+  }
+
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
     call CS.set();
     if (error == SUCCESS) {
+      printf("Opcode: 0x%x 0x%x 0x%x\n", rxBuf[0], rxBuf[1], rxBuf[2]);
+      if (rxBuf[0] == 0xee) {
+        call CS.clr();
+        call SpiPacket.send(txBuf, rxBuf, 5);
+        printf("Retrying spi...\n");
+        return;
+      }
+
       if (rxBuf[0] & 0x1) { // Odd opcode for notifications
         switch (rxBuf[0]) {
           case 1:
@@ -157,6 +156,9 @@ implementation
             break;
           case 3:
             post connected();
+            break;
+          case 5:
+            post disconnected();
             break;
         }
       } else { // Even opcodes for responses

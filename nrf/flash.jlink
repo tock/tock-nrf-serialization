@@ -1,5 +1,0 @@
-r
-loadbin _build/nrf_s110.bin 00016000
-r
-g
-exit
