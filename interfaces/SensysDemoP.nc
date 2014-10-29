@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2010 The Regents of the University  of California.
+ * Copyright (c) 2014 The Regents of the University  of California.
  * All rights reserved."
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 #include <lib6lowpan/ip.h>
 #include <lib6lowpan/ip.h>
 #include <printf.h>
+#include "sensys_structs.h"
 
 #define DATA_TX_PERIOD 5000L
 
@@ -45,7 +46,8 @@ module SensysDemoP
     {
         interface Boot;
         interface SplitControl as RadioControl;
-        interface UDP as Sock;
+        interface UDP as DataSock;
+        interface UDP as BLESock;
         interface GeneralIO as Led;
         interface Timer<TMilli> as Timer;
         interface SplitControl as SensorControl;
@@ -63,6 +65,7 @@ module SensysDemoP
 implementation
 {
     struct sockaddr_in6 data_dest;
+    struct sockaddr_in6 ble_dest;
     struct sockaddr_in6 nhop;
     bool do_data_tx;
 
@@ -97,14 +100,17 @@ implementation
         val[val_len] = 0;
         printf("sending data to %s\n", val);
         inet_pton6(val, &data_dest.sin6_addr);
+        inet_pton6(val, &ble_dest.sin6_addr);
         do_data_tx = TRUE;
     }
 
     event void Boot.booted()
     {
-        data_dest.sin6_port = htons(4410);;
+        data_dest.sin6_port = htons(4410);
+        ble_dest.sin6_port = htons(4411);
         call Timer.startPeriodic(DATA_TX_PERIOD);
-        call Sock.bind(4410);
+        call DataSock.bind(4410);
+        call BLESock.bind(4411);
         call Led.makeOutput();
         call Led.set();
         call SensorControl.start();
@@ -122,29 +128,12 @@ implementation
         call RadioControl.start();
 
         call BlePeripheral.initialize();
-
-
     }
 
     event void RadioControl.startDone(error_t e) {}
     event void RadioControl.stopDone(error_t e) {}
     event void SensorControl.startDone(error_t e) {}
     event void SensorControl.stopDone(error_t e) {}
-
-    typedef struct
-    {
-        int16_t acc_x;
-        int16_t acc_y;
-        int16_t acc_z;
-        int16_t mag_x;
-        int16_t mag_y;
-        int16_t mag_z;
-        uint16_t lux;
-        uint16_t fdest[8];
-        uint16_t fnhop[8];
-        uint8_t pfxlen[8];
-        uint8_t ftable_len;
-    } __attribute__((__packed__))  node_data_t;
 
     void print_dstruct(node_data_t *v)
     {
@@ -164,8 +153,32 @@ implementation
             printf("    - [%d]: X::%04x/%d via X::%04x\n", i, v->fdest[i], v->pfxlen[i], v->fnhop[i]);
         }
 
+    } 
+
+    event void BLESock.recvfrom(struct sockaddr_in6 *from, void *data,
+                                uint16_t len, struct ip6_metadata *meta)
+    {
+        ble_data_t *rx;
+        uint16_t from_serial;
+        from_serial = from->sin6_addr.s6_addr[14];
+        from_serial = (from_serial << 8) + from->sin6_addr.s6_addr[15];
+        if (len == sizeof(ble_data_t))
+        {   
+            printf("\033[32;1m");
+            printf("Got a BLE struct from 0x%04x\n", from_serial);
+            rx = (ble_data_t*) data;
+           // print_blestruct(rx);
+            printf("\033[0m\n");
+        }   
+        else
+        {   
+            printf("Got random BLE data\n");
+        } 
     }
-    event void Sock.recvfrom(struct sockaddr_in6 *from, void *data,
+
+    
+    
+    event void DataSock.recvfrom(struct sockaddr_in6 *from, void *data,
                              uint16_t len, struct ip6_metadata *meta)
     {
         node_data_t *rx;
@@ -222,7 +235,7 @@ implementation
             valid_size++;
         }
         tx.ftable_len = valid_size;
-        call Sock.sendto(&data_dest, &tx, sizeof(node_data_t));
+        call DataSock.sendto(&data_dest, &tx, sizeof(node_data_t));
     }
     
     //BLE stuff

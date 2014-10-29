@@ -50,8 +50,10 @@ implementation
 
     SensysDemoP.RadioControl ->  IPStackC;
 
-    components new UdpSocketC() as Sock;
-    SensysDemoP.Sock -> Sock;
+    components new UdpSocketC() as DataSock;
+    components new UdpSocketC() as BLESock;
+    SensysDemoP.DataSock -> DataSock;
+    SensysDemoP.BLESock -> BLESock;
     SensysDemoP.Timer -> TimerMilliC;
 
     components HplSam4lClockC;

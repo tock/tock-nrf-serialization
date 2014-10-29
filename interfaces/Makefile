@@ -5,7 +5,7 @@ COMPONENT=SensysDemoC
 SDB_PUBLISH_NAME=helena:sensys-1.0
 #This is the helena signing key
 #If you do not have this key, get it from Michael
-SDB_PUBLISH_KEY=5ADE1428
+#SDB_PUBLISH_KEY=5ADE1428
 
 CFLAGS += -DRF230_DEF_CHANNEL=26
 
@@ -35,7 +35,7 @@ PFLAGS += -DBLIP_L2_RETRIES=6
 PFLAGS += -DBLIP_L2_DELAY=103
 
 # Configure how many of the 6LoWPAN headers we support
-#PFLAGS += -DLIB6LOWPAN_FULL=1
+PFLAGS += -DLIB6LOWPAN_FULL=1
 
 # Configure the header compression for 6LoWPAN
 PFLAGS += -DLIB6LOWPAN_HC_VERSION=6
