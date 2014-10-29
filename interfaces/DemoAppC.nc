@@ -8,7 +8,6 @@ implementation
   components new Sam4lUSART2C();
   components new SpiBleLocalCharC() as ObserverChar;
   components new SpiBleLocalServiceC() as ObserverImpl;
-  components new Sam4lSPI3C();
 
   components SerialPrintfC;
 
