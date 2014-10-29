@@ -149,20 +149,16 @@ implementation
         return;
       }
 
-      if (rxBuf[0] & 0x1) { // Odd opcode for notifications
-        switch (rxBuf[0]) {
-          case 1:
-            post ready();
-            break;
-          case 3:
-            post connected();
-            break;
-          case 5:
-            post disconnected();
-            break;
-        }
-      } else { // Even opcodes for responses
-
+      switch (rxBuf[0]) {
+        case SPI_RESET:
+          post ready();
+          break;
+        case SPI_CONNECT:
+          post connected();
+          break;
+        case SPI_DISCONNECT:
+          post disconnected();
+          break;
       }
     }
   }

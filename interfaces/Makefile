@@ -1,4 +1,4 @@
-COMPONENT=SensysDemoC
+COMPONENT=DemoAppC
 # uncomment this for network programming support
 # BOOTLOADER=tosboot
 

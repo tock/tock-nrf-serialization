@@ -15,13 +15,8 @@
 #include "spi_slave.h"
 #include "nrf_gpio.h"
 
-#define LED  13
-
-#define MISO 15
-#define MOSI 14
-#define CSN  18
-#define SCK  16
-#define INT  19
+#include "firestorm.h"
+#include "spi_interface.h"
 
 /*
  * The SPI tx buffers are structured in a queue implemented as a a ring-array.
@@ -77,12 +72,6 @@ inline bool spi_empty() {
   return spi_txq_tail == spi_txq_head;
 }
 
-enum SPI_CMDS {
-  RESET_CMD = 1,
-  CONNECTED_CMD = 3,
-  DISCONNECTED_CMD = 5
-};
-
 ble_gap_adv_params_t adv_params = {
   .type = BLE_GAP_ADV_TYPE_ADV_IND,
   .fp = BLE_GAP_ADV_FP_ANY,
@@ -108,7 +97,7 @@ void init_spi(spi_slave_event_handler_t handler) {
   APP_ERROR_CHECK(spi_slave_init(&config));
 
 
-  uint8_t reset_cmd[1] = {RESET_CMD};
+  uint8_t reset_cmd[1] = {SPI_RESET};
   spi_enqueue_cmd(reset_cmd, sizeof(reset_cmd));
 }
 
@@ -132,11 +121,11 @@ void ble_handler(ble_evt_t *evt) {
   uint8_t spi_cmd[1];
   switch(evt->header.evt_id) {
     case BLE_GAP_EVT_CONNECTED:
-      spi_cmd[0] = CONNECTED_CMD;
+      spi_cmd[0] = SPI_CONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
     case BLE_GAP_EVT_DISCONNECTED:
-      spi_cmd[0] = DISCONNECTED_CMD;
+      spi_cmd[0] = SPI_DISCONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
   }
@@ -145,16 +134,16 @@ void ble_handler(ble_evt_t *evt) {
 void spi_handler(spi_slave_evt_t evt) {
   switch (evt.evt_type) {
     case SPI_SLAVE_BUFFERS_SET_DONE:
-      if (spi_tx_buf[0] & 0x1) {
+      if (spi_tx_buf[0] != 0) {
         nrf_gpio_pin_set(INT);
       }
       break;
     case SPI_SLAVE_XFER_DONE:
       nrf_gpio_pin_clear(INT);
       switch (spi_rx_buf[0]) {
-        case 1: // Started...
+        case SPI_RESET: // Started...
           break;
-        case 2: // start advertising
+        case SPI_START_ADVERTISING: // start advertising
           APP_ERROR_CHECK(sd_ble_gap_adv_start(&adv_params));
           break;
         default:
