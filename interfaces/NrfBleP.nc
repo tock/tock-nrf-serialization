@@ -90,7 +90,7 @@ implementation
   }
 
   command error_t BlePeripheral.startAdvertising() {
-    txbuf[0] = 2;
+    txbuf[0] = SPI_START_ADVERTISING;
     call CS.clr();
     call SpiPacket.send(txbuf, rxbuf, 5);
   }
@@ -115,7 +115,7 @@ implementation
     call CS.set();
     call IntPort.makeInput();
     call Int.enableRisingEdge();
-    txbuf[0] = 1;
+    txbuf[0] = SPI_RESET;
   }
 
   async event void Int.fired()
