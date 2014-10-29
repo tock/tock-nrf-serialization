@@ -151,7 +151,8 @@ void spi_handler(spi_slave_evt_t evt) {
     case SPI_SLAVE_XFER_DONE:
       nrf_gpio_pin_clear(INT);
       switch (spi_rx_buf[0]) {
-        case SPI_RESET: // Started...
+        case SPI_RESET: // Reset system
+          NVIC_SystemReset();
           break;
         case SPI_START_ADVERTISING: // start advertising
           APP_ERROR_CHECK(sd_ble_gap_adv_start(&adv_params));
