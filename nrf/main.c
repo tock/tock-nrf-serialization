@@ -131,6 +131,16 @@ void ble_handler(ble_evt_t *evt) {
   }
 }
 
+void add_primary_service_cmd(uint8_t *buf) {
+  uint16_t service_handle;
+  ble_uuid_t uuid;
+  uuid.type = BLE_UUID_TYPE_BLE;
+  uuid.uuid = (uint16_t)buf[1] | (((uint16_t)buf[2]) << 8);
+  APP_ERROR_CHECK(
+      sd_ble_gatts_service_add(BLE_GATTS_SERVICE_PRIMARY,
+                               &uuid, &service_handle));
+}
+
 void spi_handler(spi_slave_evt_t evt) {
   switch (evt.evt_type) {
     case SPI_SLAVE_BUFFERS_SET_DONE:
@@ -146,6 +156,10 @@ void spi_handler(spi_slave_evt_t evt) {
         case SPI_START_ADVERTISING: // start advertising
           APP_ERROR_CHECK(sd_ble_gap_adv_start(&adv_params));
           break;
+        case SPI_STOP_ADVERTISING:
+          APP_ERROR_CHECK(sd_ble_gap_adv_stop());
+        case SPI_ADD_SERVICE:
+          add_primary_service(spi_rx_buf);
         default:
           break;
       }
