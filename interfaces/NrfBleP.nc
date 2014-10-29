@@ -67,25 +67,51 @@ implementation
 
   command error_t BleLocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
   {
-    uint8_t* rxBuf;
-    uint8_t header_byte=0x00;
-    uint8_t i=0;
+    txbuf[0] = SPI_NOTIFY;
+
+    //TODO: The right way to do this?
+    txbuf[1] = value;
+
+    call SpiPacket.send(txbuf, rxbuf, 1);
 
     return SUCCESS;
+
   }
 
   command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
     return SUCCESS;
   }
 
-  command error_t NrfBleService.createService[uint8_t handle](uuid_t UUID) {
+  command error_t NrfBleService.createService[uint8_t handle](uuid_t serviceUUID) {
     //TODO(alevy): add service over spi
+
+    txbuf[0] = SPI_ADD_SERVICE;
+    txbuf[1] = serviceUUID & 0xFF;
+    txbuf[2] = serviceUUID >> 8;
+
+    call CS.clr();
+
+    call SpiPacket.send(txbuf, rxbuf, 3);
+
     return SUCCESS;
   }
 
 
-  command error_t NrfBleService.addCharacteristic[uint8_t service_handle](uuid_t UUID, uint8_t char_handle)
+  command error_t NrfBleService.addCharacteristic[uint8_t service_handle](uuid_t serviceUUID, uuid_t charUUID, uint8_t char_handle)
   {
+    //Packet Header
+    txbuf[0] = SPI_ADD_CHARACTERISTIC;
+
+    //Serivce 
+    txbuf[1] = serviceUUID & 0xff;
+    txbuf[2] = serviceUUID >> 8;
+
+    //Char
+    txbuf[3] = charUUID & 0xff;
+    txbuf[4] = charUUID >> 8;
+    call CS.clr();
+    call SpiPacket.send(txbuf, rxbuf, 5);
+
     return SUCCESS;
   }
 
@@ -97,6 +123,10 @@ implementation
 
   command error_t BlePeripheral.stopAdvertising() {
     //TODO(alevy): implement nrf stop advertising over SPI
+    txbuf[0] = SPI_STOP_ADVERTISING;
+    call CS.clr();
+    call SpiPacket.send(txbuf, rxbuf, 1);
+
     return SUCCESS;
   }
 
