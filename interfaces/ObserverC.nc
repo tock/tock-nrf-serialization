@@ -14,7 +14,7 @@ implementation
 
   command error_t BleLocalService.configure() {
     call ObserverImpl.createService(myuuid);
-    call ObserverImpl.addCharacteristic(myuuid, call ObserverChar.getUUID(),
+    call ObserverImpl.addCharacteristic(call ObserverChar.getUUID(),
       call ObserverChar.getHandle());
     return SUCCESS;
   }
