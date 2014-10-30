@@ -1,4 +1,4 @@
-#include "ble.h"
+#include "tinyos_ble.h"
 
 module ObserverC
 {
@@ -12,9 +12,10 @@ implementation
 
   uuid_t myuuid = 0x2108;
 
+
   command error_t BleLocalService.configure() {
     call ObserverImpl.createService(myuuid);
-    call ObserverImpl.addCharacteristic(myuuid, call ObserverChar.getUUID(),
+    call ObserverImpl.addCharacteristic(0x2109,
       call ObserverChar.getHandle());
     return SUCCESS;
   }

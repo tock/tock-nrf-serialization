@@ -6,7 +6,7 @@
 
 #include "printf.h"
 
-module DemoC
+module DemoPeripheralC
 {
   uses interface BlePeripheral;
   uses interface Boot;
@@ -25,6 +25,7 @@ implementation
 
   event void BlePeripheral.ready()
   {
+    call Observer.configure();
     call BlePeripheral.startAdvertising();
   }
 

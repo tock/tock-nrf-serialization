@@ -16,7 +16,7 @@
 #include "nrf_gpio.h"
 
 #include "firestorm.h"
-#include "spi_interface.h"
+#include "tinyos_ble.h"
 
 /*
  * The SPI tx buffers are structured in a queue implemented as a a ring-array.
@@ -25,9 +25,8 @@
  * enqueue the next command.
  */
 
-#define SPI_PKT_LEN 10
-#define SPI_TX_QUEUE_SIZE 10
-#define spi_tx_buf spi_tx_queue[spi_txq_head]
+#define SPI_PKT_LEN 50
+#define SPI_TX_QUEUE_SIZE 3
 
 uint8_t spi_rx_buf[SPI_PKT_LEN];
 
@@ -35,6 +34,18 @@ int spi_txq_head = 0;
 int spi_txq_tail = 0;
 uint8_t spi_tx_queue[SPI_TX_QUEUE_SIZE][SPI_PKT_LEN];
 uint8_t spi_tx_empty[SPI_PKT_LEN];
+uint8_t *spi_tx_cur;
+
+uint8_t* spi_dequeue_cmd() {
+  uint8_t* result;
+  if (spi_txq_tail == spi_txq_head) {
+    result = spi_tx_empty;
+  } else {
+    result = spi_tx_queue[spi_txq_head];
+    spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
+  }
+  return result;
+}
 
 /*
  * spi_enqueue_cmd
@@ -50,33 +61,25 @@ int spi_enqueue_cmd(uint8_t* cmd, size_t len) {
   memcpy(spi_tx_queue[spi_txq_tail], cmd, len);
   spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
   if ((spi_txq_tail - spi_txq_head) % SPI_TX_QUEUE_SIZE == 1) {
+    spi_tx_cur = spi_dequeue_cmd();
     APP_ERROR_CHECK(spi_slave_buffers_set(
-          spi_tx_buf, spi_rx_buf,
-          sizeof(spi_tx_buf), sizeof(spi_rx_buf)));
+          spi_tx_cur, spi_rx_buf,
+          SPI_PKT_LEN, sizeof(spi_rx_buf)));
   }
   return 0;
-}
-
-uint8_t* spi_dequeue_cmd() {
-  uint8_t* result;
-  if (spi_txq_tail == spi_txq_head) {
-    result = spi_tx_empty;
-  } else {
-    result = spi_tx_queue[spi_txq_head];
-    spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
-  }
-  return result;
 }
 
 inline bool spi_empty() {
   return spi_txq_tail == spi_txq_head;
 }
 
-ble_gap_adv_params_t adv_params = {
-  .type = BLE_GAP_ADV_TYPE_ADV_IND,
-  .fp = BLE_GAP_ADV_FP_ANY,
-  .interval = BLE_GAP_ADV_INTERVAL_MIN,
-  .timeout = BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED
+ble_gap_scan_params_t scan_params = {
+  .active = 0,
+  .selective = 0,
+  .p_whitelist = NULL,
+  .interval = 0x00A0,
+  .window = 0x0050,
+  .timeout = 0
 };
 
 void init_spi(spi_slave_event_handler_t handler) {
@@ -103,6 +106,7 @@ void init_spi(spi_slave_event_handler_t handler) {
 
 void app_error_handler(uint32_t error_code,
                        uint32_t line_num, const uint8_t *file) {
+  nrf_gpio_pin_set(LED);
   /*simple_uart_putstring((const uint8_t*)"error! ");
   simple_uart_put((line_num / 100) + 48);
   simple_uart_put((line_num % 100) / 10 + 48);
@@ -110,41 +114,46 @@ void app_error_handler(uint32_t error_code,
   simple_uart_putstring((const uint8_t*)"  ");
   simple_uart_put(error_code + 48);
   simple_uart_putstring((const uint8_t*)"\r\n");*/
-
+  uint8_t debug_cmd[10];
+  debug_cmd[0] = SPI_DEBUG;
+  sprintf(debug_cmd + 1, "%d: %d", error_code, line_num);
+  memcpy(spi_tx_queue[spi_txq_tail], debug_cmd, strlen(debug_cmd));
+  spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
 }
 
 void assert_nrf_callback(uint16_t line_num, const uint8_t *file_name) {
   app_error_handler(0xff, line_num, file_name);
 }
 
+void spi_notify_advertisement(ble_gap_evt_adv_report_t adv_report) {
+  uint8_t spi_cmd[41];
+  spi_cmd[0] = SPI_ADVERTISE;
+  memcpy(spi_cmd + 1, adv_report.peer_addr.addr,
+      sizeof(adv_report.peer_addr.addr));
+  spi_cmd[7] = adv_report.rssi;
+  spi_cmd[8] = adv_report.dlen;
+  memcpy(spi_cmd + 9, adv_report.data, adv_report.dlen);
+  spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
+}
+
 void ble_handler(ble_evt_t *evt) {
-  uint8_t spi_cmd[1];
+  uint8_t spi_cmd[32];
   switch(evt->header.evt_id) {
-    case BLE_GAP_EVT_CONNECTED:
-      spi_cmd[0] = SPI_CONNECT;
-      spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
+    case BLE_GAP_EVT_ADV_REPORT:
+      spi_notify_advertisement(evt->evt.gap_evt.params.adv_report);
       break;
-    case BLE_GAP_EVT_DISCONNECTED:
-      spi_cmd[0] = SPI_DISCONNECT;
+    default:
+      spi_cmd[0] = SPI_DEBUG;
+      sprintf(spi_cmd + 1, "BLE EVT: %d", evt->header.evt_id);
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
   }
 }
 
-void add_primary_service_cmd(uint8_t *buf) {
-  uint16_t service_handle;
-  ble_uuid_t uuid;
-  uuid.type = BLE_UUID_TYPE_BLE;
-  uuid.uuid = (uint16_t)buf[1] | (((uint16_t)buf[2]) << 8);
-  APP_ERROR_CHECK(
-      sd_ble_gatts_service_add(BLE_GATTS_SERVICE_PRIMARY,
-                               &uuid, &service_handle));
-}
-
 void spi_handler(spi_slave_evt_t evt) {
   switch (evt.evt_type) {
     case SPI_SLAVE_BUFFERS_SET_DONE:
-      if (spi_tx_buf[0] != 0) {
+      if (spi_tx_cur[0] != 0) {
         nrf_gpio_pin_set(INT);
       }
       break;
@@ -154,24 +163,19 @@ void spi_handler(spi_slave_evt_t evt) {
         case SPI_RESET: // Reset system
           NVIC_SystemReset();
           break;
-        case SPI_START_ADVERTISING: // start advertising
-          APP_ERROR_CHECK(sd_ble_gap_adv_start(&adv_params));
+        case SPI_START_SCAN: // start advertising
+          APP_ERROR_CHECK(sd_ble_gap_scan_start(&scan_params));
           break;
-        case SPI_STOP_ADVERTISING:
-          APP_ERROR_CHECK(sd_ble_gap_adv_stop());
-        case SPI_ADD_SERVICE:
-          add_primary_service(spi_rx_buf);
+        case SPI_STOP_SCAN:
+          APP_ERROR_CHECK(sd_ble_gap_scan_stop());
+          break;
         default:
           break;
       }
-      if (spi_txq_tail == spi_txq_head) {
-        spi_tx_buf[0] = 0;
-      } else {
-        spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
-      }
+      spi_tx_cur = spi_dequeue_cmd();
       APP_ERROR_CHECK(spi_slave_buffers_set(
-            spi_tx_buf, spi_rx_buf,
-            sizeof(spi_tx_buf), sizeof(spi_rx_buf)));
+            spi_tx_cur, spi_rx_buf,
+            sizeof(SPI_PKT_LEN), sizeof(spi_rx_buf)));
       break;
     default:
       break;
@@ -188,28 +192,6 @@ int main(void)
 
   SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_RC_250_PPM_250MS_CALIBRATION, false);
   APP_ERROR_CHECK(softdevice_ble_evt_handler_set(&ble_handler));
-
-  ble_enable_params_t ble_enable = {
-    .gatts_enable_params = { .service_changed = 0 }
-  };
-  APP_ERROR_CHECK(sd_ble_enable(&ble_enable));
-
-  ble_gap_conn_sec_mode_t sec_mode;
-  BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
-  APP_ERROR_CHECK(sd_ble_gap_device_name_set(&sec_mode, (uint8_t*)"Firestorm", 9));
-
-  uint8_t adv_flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-  int8_t tx_power_level = 0;
-  sd_ble_gap_tx_power_set(tx_power_level);
-  ble_advdata_t advdata = {
-    .name_type               = BLE_ADVDATA_FULL_NAME,
-    .include_appearance      = true,
-    .p_tx_power_level        = &tx_power_level,
-    .flags.size              = 1,
-    .flags.p_data            = &adv_flags
-  };
-
-  APP_ERROR_CHECK(ble_advdata_set(&advdata, NULL));
 
   init_spi(&spi_handler);
   while (1) {

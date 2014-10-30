@@ -7,7 +7,7 @@ SDB_PUBLISH_NAME=helena:sensys-1.0
 #If you do not have this key, get it from Michael
 SDB_PUBLISH_KEY=5ADE1428
 
-CFLAGS += -DRF230_DEF_CHANNEL=26
+CFLAGS += -I../include -DRF230_DEF_CHANNEL=26
 
 ################################################################################
 ### Set the addressing scheme
