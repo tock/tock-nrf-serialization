@@ -6,7 +6,7 @@
 
 #include "printf.h"
 
-module DemoC
+module DemoPeripheralC
 {
   uses interface BlePeripheral;
   uses interface Boot;

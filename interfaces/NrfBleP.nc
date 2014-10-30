@@ -6,10 +6,12 @@
  */
 
 #include "tinyos_ble.h"
+#include "printf.h"
 
 module NrfBleP
 {
   provides interface BlePeripheral;
+  provides interface BleCentral;
   provides interface BleLocalChar as BleLocalChar[uint8_t];
   provides interface NrfBleService as NrfBleService[uint8_t];
   uses interface HplSam4lUSART as SpiHPL;
@@ -119,6 +121,12 @@ implementation
     return enqueue_tx(txbuf);
   }
 
+  command error_t BleCentral.scan() {
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_START_SCAN;
+    return enqueue_tx(txbuf);
+  }
+
   command error_t BlePeripheral.startAdvertising() {
     uint8_t txbuf[10];
     txbuf[0] = SPI_START_ADVERTISING;
@@ -130,7 +138,7 @@ implementation
     return SUCCESS;
   }
 
-  command void BlePeripheral.initialize()
+  void initialize()
   {
     uint8_t txbuf[10];
     txbuf[0] = SPI_RESET;
@@ -160,6 +168,14 @@ implementation
     post initSpi();
   }
 
+  command void BlePeripheral.initialize() {
+    initialize();
+  }
+
+  command void BleCentral.initialize() {
+    initialize();
+  }
+
   task void initSpi() {
     uint8_t *buf = txbufs[txbuf_hd];
     if (txbuf_hd == txbuf_tl) {
@@ -184,6 +200,13 @@ implementation
     signal BlePeripheral.disconnected();
   }
 
+  default event void BlePeripheral.ready() {}
+  default event void BlePeripheral.connected() {}
+  default event void BlePeripheral.disconnected() {}
+
+  default event void BleCentral.ready() {}
+  default async event void BleCentral.advReceived(uint8_t* addr, uint8_t *data, uint8_t len) {}
+
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
     call CS.set();
@@ -205,6 +228,9 @@ implementation
           break;
         case SPI_DISCONNECT:
           post disconnected();
+          break;
+        case SPI_ADVERTISE:
+          signal BleCentral.advReceived(NULL, rxBuf, len);
           break;
         case SPI_DEBUG:
           printf("[NRF] %s\n", rxBuf + 1);
