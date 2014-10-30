@@ -11,6 +11,8 @@ enum SPI_OPCODES {
   SPI_DISCONNECT = 5, // DISCONNECT or DISCONNECTED
   SPI_ADD_SERVICE = 6,
   SPI_ADD_CHARACTERISTIC = 7,
-  SPI_NOTIFY = 8
+  SPI_NOTIFY = 8,
+  // addition opcodes go here
+  SPI_DEBUG = 0xcc
 };
 #endif

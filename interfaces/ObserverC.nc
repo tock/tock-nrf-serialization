@@ -1,4 +1,4 @@
-#include "ble.h"
+#include "tinyos_ble.h"
 
 module ObserverC
 {

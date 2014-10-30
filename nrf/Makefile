@@ -6,6 +6,8 @@ APPLICATION_SRCS += sd_common/softdevice_handler.c
 APPLICATION_SRCS += spi_slave/spi_slave.c
 APPLICATION_SRCS += ble/ble_advdata.c
 
+LIBRARY_PATHS += ../include
+
 DEVICE = NRF51
 
 ifndef TARGET

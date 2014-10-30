@@ -5,7 +5,7 @@
  * NRF Spi interface
  */
 
-#include "ble.h"
+#include "tinyos_ble.h"
 
 module NrfBleP
 {
@@ -21,8 +21,28 @@ module NrfBleP
 implementation
 {
 
-  uint8_t txbuf[80];
-  uint8_t rxbuf[80];
+  task void initSpi();
+
+  uint8_t txbufs[10][10];
+  int txbuf_hd = 0;
+  int txbuf_tl = 0;
+
+  error_t enqueue_tx(uint8_t req[10]) {
+    if ((txbuf_hd - txbuf_hd) % 10 == 1) {
+      return FAIL;
+    }
+
+    memcpy(txbufs[txbuf_tl], req, 10);
+    txbuf_tl = (txbuf_tl + 1) % 10;
+
+    if ((txbuf_tl - txbuf_hd) % 10 == 1) {
+      post initSpi();
+    }
+
+    return SUCCESS;
+  }
+
+  uint8_t rxbuf[10];
 
   enum
   {
@@ -79,20 +99,30 @@ implementation
   }
 
   command error_t NrfBleService.createService[uint8_t handle](uuid_t UUID) {
-    //TODO(alevy): add service over spi
-    return SUCCESS;
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_ADD_SERVICE;
+    txbuf[1] = handle;
+    txbuf[2] = (uint8_t)UUID;
+    txbuf[3] = (uint8_t)(UUID >> 8);
+    return enqueue_tx(txbuf);
   }
 
 
   command error_t NrfBleService.addCharacteristic[uint8_t service_handle](uuid_t UUID, uint8_t char_handle)
   {
-    return SUCCESS;
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_ADD_CHARACTERISTIC;
+    txbuf[1] = service_handle;
+    txbuf[2] = char_handle;
+    txbuf[3] = (uint8_t)UUID;
+    txbuf[4] = (uint8_t)(UUID >> 8);
+    return enqueue_tx(txbuf);
   }
 
   command error_t BlePeripheral.startAdvertising() {
+    uint8_t txbuf[10];
     txbuf[0] = SPI_START_ADVERTISING;
-    call CS.clr();
-    call SpiPacket.send(txbuf, rxbuf, 5);
+    return enqueue_tx(txbuf);
   }
 
   command error_t BlePeripheral.stopAdvertising() {
@@ -102,6 +132,8 @@ implementation
 
   command void BlePeripheral.initialize()
   {
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_RESET;
     call SpiHPL.enableUSARTPin(USART2_TX_PC12);
     call SpiHPL.enableUSARTPin(USART2_RX_PC11);
     call SpiHPL.enableUSARTPin(USART2_CLK_PA18);
@@ -115,13 +147,28 @@ implementation
     call CS.set();
     call IntPort.makeInput();
     call Int.enableRisingEdge();
-    txbuf[0] = SPI_RESET;
+
+    enqueue_tx(txbuf);
+    post initSpi();
   }
 
   async event void Int.fired()
   {
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_NOOP;
+    enqueue_tx(txbuf);
+    post initSpi();
+  }
+
+  task void initSpi() {
+    uint8_t *buf = txbufs[txbuf_hd];
+    if (txbuf_hd == txbuf_tl) {
+      return;
+    }
+    txbuf_hd = (txbuf_hd + 1) % 10;
     call CS.clr();
-    call SpiPacket.send(NULL, rxbuf, 5);
+    call SpiPacket.send(buf, rxbuf, 10);
+
   }
 
 
@@ -141,11 +188,11 @@ implementation
                                       uint16_t len, error_t error) {
     call CS.set();
     if (error == SUCCESS) {
-      printf("Opcode: 0x%x 0x%x 0x%x\n", rxBuf[0], rxBuf[1], rxBuf[2]);
+      printf("Opcode: 0x%x 0x%x\n", txBuf[0], rxBuf[0]);
       if (rxBuf[0] == 0xee) {
-        call CS.clr();
-        call SpiPacket.send(txBuf, rxBuf, 5);
         printf("Retrying spi...\n");
+        call CS.clr();
+        call SpiPacket.send(txBuf, rxBuf, 10);
         return;
       }
 
@@ -159,8 +206,11 @@ implementation
         case SPI_DISCONNECT:
           post disconnected();
           break;
+        case SPI_DEBUG:
+          printf("[NRF] %s\n", rxBuf + 1);
       }
     }
+    post initSpi();
   }
 }
 
