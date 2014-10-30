@@ -1,6 +1,3 @@
-#ifndef TINYOS_BLE_H
-#define TINYOS_BLE_H 1
-typedef uint16_t uuid_t;
 
 enum SPI_OPCODES {
   SPI_NOOP = 0,
@@ -13,4 +10,3 @@ enum SPI_OPCODES {
   SPI_ADD_CHARACTERISTIC = 7,
   SPI_NOTIFY = 8
 };
-#endif
