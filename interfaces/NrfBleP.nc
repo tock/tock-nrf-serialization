@@ -89,13 +89,13 @@ implementation
     return SUCCESS;
   }
 
-  command error_t BleLocalChar.notify[uint8_t handle](uint16_t len, uint8_t const *value)
+  command error_t BleLocalChar.notify[uint8_t handle](uint16_t len,
+    uint8_t const *value)
   {
-    uint8_t* rxBuf;
-    uint8_t header_byte=0x00;
-    uint8_t i=0;
-
-    return SUCCESS;
+    uint8_t txbuf[10];
+    txbuf[0] = SPI_NOTIFY;
+    txbuf[1] = handle;
+    return enqueue_tx(txbuf);
   }
 
   command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
@@ -149,7 +149,7 @@ implementation
     call SpiHPL.enableUSARTPin(USART2_CLK_PA18);
     call SpiHPL.initSPIMaster();
     call SpiHPL.setSPIMode(0,0);
-    call SpiHPL.setSPIBaudRate(4000000);
+    call SpiHPL.setSPIBaudRate(400000);
     call SpiHPL.enableTX();
     call SpiHPL.enableRX();
 
@@ -159,7 +159,6 @@ implementation
     call Int.enableRisingEdge();
 
     enqueue_tx(txbuf);
-    post initSpi();
   }
 
   async event void Int.fired()
@@ -167,7 +166,6 @@ implementation
     uint8_t txbuf[10];
     txbuf[0] = SPI_NOOP;
     enqueue_tx(txbuf);
-    post initSpi();
   }
 
   command void BlePeripheral.initialize() {
@@ -183,10 +181,10 @@ implementation
     if (txbuf_hd == txbuf_tl) {
       return;
     }
+    printf("SPI...");
     txbuf_hd = (txbuf_hd + 1) % 10;
     call CS.clr();
     call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN);
-
   }
 
 
@@ -217,9 +215,9 @@ implementation
     if (error == SUCCESS) {
       printf("Opcode: 0x%x 0x%x\n", txBuf[0], rxBuf[0]);
       if (rxBuf[0] == 0xee) {
-        printf("Retrying spi...\n");
+        //printf("Retrying spi...\n");
         call CS.clr();
-        call SpiPacket.send(txBuf, rxBuf, SPI_PKT_LEN);
+        call SpiPacket.send(txBuf, rxbuf, SPI_PKT_LEN);
         return;
       }
 
