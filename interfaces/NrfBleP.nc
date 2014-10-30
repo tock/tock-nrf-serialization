@@ -139,7 +139,7 @@ implementation
     call SpiHPL.enableUSARTPin(USART2_CLK_PA18);
     call SpiHPL.initSPIMaster();
     call SpiHPL.setSPIMode(0,0);
-    call SpiHPL.setSPIBaudRate(20000);
+    call SpiHPL.setSPIBaudRate(4000000);
     call SpiHPL.enableTX();
     call SpiHPL.enableRX();
 

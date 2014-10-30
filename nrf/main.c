@@ -114,7 +114,11 @@ void app_error_handler(uint32_t error_code,
   simple_uart_putstring((const uint8_t*)"  ");
   simple_uart_put(error_code + 48);
   simple_uart_putstring((const uint8_t*)"\r\n");*/
-
+  uint8_t debug_cmd[10];
+  debug_cmd[0] = SPI_DEBUG;
+  sprintf(debug_cmd + 1, "%d: %d", error_code, line_num);
+  memcpy(spi_tx_queue[spi_txq_tail], debug_cmd, strlen(debug_cmd));
+  spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
 }
 
 void assert_nrf_callback(uint16_t line_num, const uint8_t *file_name) {
@@ -183,7 +187,7 @@ void add_characteristic_cmd(uint8_t* req) {
   ble_gatts_attr_md_t attr_md;
   BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
   BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
-  attr_md.vlen = false;
+  attr_md.vlen = true;
   attr_md.vloc = BLE_GATTS_VLOC_STACK;
   attr_md.rd_auth = false;
   attr_md.wr_auth = false;
@@ -194,15 +198,19 @@ void add_characteristic_cmd(uint8_t* req) {
     .init_len = 0,
     .init_offs = 0,
     .max_len = 24,
-    .p_value = NULL
+    .p_value = ""
   };
 
-  APP_ERROR_CHECK(
-      sd_ble_gatts_characteristic_add(service_handle, NULL, &char_attr,
+  ble_gatts_char_md_t char_md;
+  ble_gatts_char_md_t meta;
+  memset(&meta, 0, sizeof(ble_gatts_char_md_t));
+  meta.char_props.read          = 1;
+  meta.p_char_user_desc         = "Random";
+  meta.char_user_desc_max_size  = strlen((char*) "Random");
+  meta.char_user_desc_size      = strlen((char*) "Random");
+
+  APP_ERROR_CHECK(sd_ble_gatts_characteristic_add(service_handle, &meta, &char_attr,
          char_handles + spi_char_handle));
-  nrf_gpio_pin_set(LED);
-  char* debug_cmd = "\xccSuccess!";
-  spi_enqueue_cmd((uint8_t*)debug_cmd, strlen(debug_cmd));
   
 }
 
