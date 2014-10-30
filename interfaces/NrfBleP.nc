@@ -23,9 +23,11 @@ module NrfBleP
 implementation
 {
 
+  #define SPI_PKT_LEN 40
+
   task void initSpi();
 
-  uint8_t txbufs[10][10];
+  uint8_t txbufs[10][SPI_PKT_LEN];
   int txbuf_hd = 0;
   int txbuf_tl = 0;
 
@@ -183,13 +185,14 @@ implementation
     }
     txbuf_hd = (txbuf_hd + 1) % 10;
     call CS.clr();
-    call SpiPacket.send(buf, rxbuf, 10);
+    call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN);
 
   }
 
 
   task void ready() {
     signal BlePeripheral.ready();
+    signal BleCentral.ready();
   }
 
   task void connected() {
@@ -215,7 +218,7 @@ implementation
       if (rxBuf[0] == 0xee) {
         printf("Retrying spi...\n");
         call CS.clr();
-        call SpiPacket.send(txBuf, rxBuf, 10);
+        call SpiPacket.send(txBuf, rxBuf, SPI_PKT_LEN);
         return;
       }
 
