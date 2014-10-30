@@ -58,7 +58,7 @@ implementation
         call WDTClockCtl.enable();
         call UDP.bind(0xFF5);
         if (WDT_CTRL->bits.en)
-            return;
+            return SUCCESS;
         cfg = *WDT_CTRL;
         cfg.bits.cen = 0;
         cfg.bits.key = WDT_KEY_1;
@@ -97,7 +97,8 @@ implementation
         printf("Waiting for scruffles...\n");
         while(WDT_CTRL->bits.en == 0);
         printf("ctl reg: 0x%08x\n", WDT_CTRL->flat);
-        print_totally_unnecessary_banner();        
+        print_totally_unnecessary_banner();
+        return SUCCESS;
     }
 
     event void UDP.recvfrom(struct sockaddr_in6 *from, void *data,

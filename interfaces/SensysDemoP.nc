@@ -140,9 +140,36 @@ implementation
     event void SensorControl.startDone(error_t e) {}
     event void SensorControl.stopDone(error_t e) {}
 
-    void print_dstruct(node_data_t *v)
+    void print_dstruct(node_data_t *v, uint16_t from)
     {
-        int i, mx;
+        int i, mx, ln;
+        uint8_t buffer[1024]; //BECAUSE I HAVE SO MUCH RAM!!
+        ln = snprintf(buffer, 1022,
+        "DSTRUCT<<{\n"
+            "\t\"from\" : \"%04x\",\n"
+            "\t\"acc_x\": %d,\n"
+            "\t\"acc_y\": %d,\n"
+            "\t\"acc_z\": %d,\n"
+            "\t\"mag_x\": %d,\n"
+            "\t\"mag_y\": %d,\n"
+            "\t\"mag_z\": %d,\n"
+            "\t\"lux\"  : %d,\n"
+            "\t\"ftlen\": %d,\n"
+            "\t[\n"
+        ,from, v->acc_x, v->acc_y, v->acc_z, v->mag_x, v->mag_y, v->mag_z, v->lux, v->ftable_len);
+        mx = v->ftable_len;
+        if (mx > 8) mx = 8; 
+        for (i = 0; i<mx; i++)
+        {
+            ln += snprintf(buffer+ln, 1022-ln,
+                "\t\t{\"r\":%04x,\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
+        }
+        ln += snprintf(buffer+ln, 1022-ln, "\t]\n}>>\n");
+        atomic{
+            printf(buffer);
+        }
+#if 0
+
         printf("  ACC_X: %d\n",v->acc_x);
         printf("  ACC_Y: %d\n",v->acc_y);
         printf("  ACC_Z: %d\n",v->acc_z);
@@ -157,8 +184,25 @@ implementation
         {
             printf("    - [%d]: X::%04x/%d via X::%04x\n", i, v->fdest[i], v->pfxlen[i], v->fnhop[i]);
         }
+#endif
+    }
 
-    } 
+    void print_blestruct(ble_data_t *v)
+    {
+        int i, ln;
+        uint8_t buffer[1024];
+        ln = snprintf(buffer, 1022, "BSTRUCT<<{\n\t\"ids\":[");
+
+        for (i = 0; i < v->len; i++)
+        {
+            ln += snprintf(buffer + ln, 1022-ln, "%02d,");
+        }
+        ln = snprintf(buffer + ln, 1022-ln, "]\n}>>\n");
+        atomic
+        {
+            printf(buffer);
+        }
+    }
 
     event void BLESock.recvfrom(struct sockaddr_in6 *from, void *data,
                                 uint16_t len, struct ip6_metadata *meta)
@@ -172,7 +216,7 @@ implementation
             printf("\033[32;1m");
             printf("Got a BLE struct from 0x%04x\n", from_serial);
             rx = (ble_data_t*) data;
-           // print_blestruct(rx);
+            print_blestruct(rx);
             printf("\033[0m\n");
         }   
         else
@@ -198,9 +242,8 @@ implementation
             liveness_idx++;
             call DataSock.sendto(&scruffles_addr, &liveness_idx, 4);    
             printf("\033[32;1m");
-            printf("Got a data struct from 0x%04x\n", from_serial);
             rx = (node_data_t*) data;
-            print_dstruct(rx);
+            print_dstruct(rx, from_serial);
             printf("\033[0m\n");
         }
         else
