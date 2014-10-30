@@ -25,7 +25,7 @@
  * enqueue the next command.
  */
 
-#define SPI_PKT_LEN 40
+#define SPI_PKT_LEN 50
 #define SPI_TX_QUEUE_SIZE 3
 
 uint8_t spi_rx_buf[SPI_PKT_LEN];
@@ -74,11 +74,11 @@ inline bool spi_empty() {
 }
 
 ble_gap_scan_params_t scan_params = {
-  .active = 1,
+  .active = 0,
   .selective = 0,
   .p_whitelist = NULL,
-  .interval = 0x0004,
-  .window = 0x0004,
+  .interval = 0x00A0,
+  .window = 0x0050,
   .timeout = 0
 };
 
@@ -106,6 +106,7 @@ void init_spi(spi_slave_event_handler_t handler) {
 
 void app_error_handler(uint32_t error_code,
                        uint32_t line_num, const uint8_t *file) {
+  nrf_gpio_pin_set(LED);
   /*simple_uart_putstring((const uint8_t*)"error! ");
   simple_uart_put((line_num / 100) + 48);
   simple_uart_put((line_num % 100) / 10 + 48);
@@ -124,14 +125,22 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *file_name) {
   app_error_handler(0xff, line_num, file_name);
 }
 
+void spi_notify_advertisement(ble_gap_evt_adv_report_t adv_report) {
+  uint8_t spi_cmd[41];
+  spi_cmd[0] = SPI_ADVERTISE;
+  memcpy(spi_cmd + 1, adv_report.peer_addr.addr,
+      sizeof(adv_report.peer_addr.addr));
+  spi_cmd[7] = adv_report.rssi;
+  spi_cmd[8] = adv_report.dlen;
+  memcpy(spi_cmd + 9, adv_report.data, adv_report.dlen);
+  spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
+}
+
 void ble_handler(ble_evt_t *evt) {
   uint8_t spi_cmd[32];
   switch(evt->header.evt_id) {
     case BLE_GAP_EVT_ADV_REPORT:
-      spi_cmd[0] = SPI_ADVERTISE;
-      ble_gap_evt_adv_report_t adv_report = evt->evt.gap_evt.params.adv_report;
-      memcpy(spi_cmd + 1, adv_report.data, adv_report.dlen);
-      spi_enqueue_cmd(spi_cmd, adv_report.dlen + 1);
+      spi_notify_advertisement(evt->evt.gap_evt.params.adv_report);
       break;
     default:
       spi_cmd[0] = SPI_DEBUG;

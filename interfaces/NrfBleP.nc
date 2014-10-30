@@ -23,7 +23,7 @@ module NrfBleP
 implementation
 {
 
-  #define SPI_PKT_LEN 40
+  #define SPI_PKT_LEN 50
 
   task void initSpi();
 
@@ -208,7 +208,8 @@ implementation
   default event void BlePeripheral.disconnected() {}
 
   default event void BleCentral.ready() {}
-  default async event void BleCentral.advReceived(uint8_t* addr, uint8_t *data, uint8_t len) {}
+  default async event void BleCentral.advReceived(uint8_t* addr,
+    uint8_t *data, uint8_t dlen, uint8_t rssi) {}
 
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
@@ -233,7 +234,7 @@ implementation
           post disconnected();
           break;
         case SPI_ADVERTISE:
-          signal BleCentral.advReceived(NULL, rxBuf, len);
+          signal BleCentral.advReceived(rxBuf + 1, rxBuf + 9, rxBuf[8], rxBuf[7]);
           break;
         case SPI_DEBUG:
           printf("[NRF] %s\n", rxBuf + 1);
