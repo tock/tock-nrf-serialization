@@ -16,7 +16,7 @@
 #include "nrf_gpio.h"
 
 #include "firestorm.h"
-#include "spi_interface.h"
+#include "tinyos_ble.h"
 
 /*
  * The SPI tx buffers are structured in a queue implemented as a a ring-array.
@@ -27,7 +27,6 @@
 
 #define SPI_PKT_LEN 10
 #define SPI_TX_QUEUE_SIZE 10
-#define spi_tx_buf spi_tx_queue[spi_txq_head]
 
 uint8_t spi_rx_buf[SPI_PKT_LEN];
 
@@ -35,6 +34,18 @@ int spi_txq_head = 0;
 int spi_txq_tail = 0;
 uint8_t spi_tx_queue[SPI_TX_QUEUE_SIZE][SPI_PKT_LEN];
 uint8_t spi_tx_empty[SPI_PKT_LEN];
+uint8_t *spi_tx_cur;
+
+uint8_t* spi_dequeue_cmd() {
+  uint8_t* result;
+  if (spi_txq_tail == spi_txq_head) {
+    result = spi_tx_empty;
+  } else {
+    result = spi_tx_queue[spi_txq_head];
+    spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
+  }
+  return result;
+}
 
 /*
  * spi_enqueue_cmd
@@ -50,27 +61,20 @@ int spi_enqueue_cmd(uint8_t* cmd, size_t len) {
   memcpy(spi_tx_queue[spi_txq_tail], cmd, len);
   spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
   if ((spi_txq_tail - spi_txq_head) % SPI_TX_QUEUE_SIZE == 1) {
+    spi_tx_cur = spi_dequeue_cmd();
     APP_ERROR_CHECK(spi_slave_buffers_set(
-          spi_tx_buf, spi_rx_buf,
-          sizeof(spi_tx_buf), sizeof(spi_rx_buf)));
+          spi_tx_cur, spi_rx_buf,
+          SPI_PKT_LEN, sizeof(spi_rx_buf)));
   }
   return 0;
-}
-
-uint8_t* spi_dequeue_cmd() {
-  uint8_t* result;
-  if (spi_txq_tail == spi_txq_head) {
-    result = spi_tx_empty;
-  } else {
-    result = spi_tx_queue[spi_txq_head];
-    spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
-  }
-  return result;
 }
 
 inline bool spi_empty() {
   return spi_txq_tail == spi_txq_head;
 }
+
+uint16_t service_handles[10];
+ble_gatts_char_handles_t char_handles[20];
 
 ble_gap_adv_params_t adv_params = {
   .type = BLE_GAP_ADV_TYPE_ADV_IND,
@@ -131,20 +135,81 @@ void ble_handler(ble_evt_t *evt) {
   }
 }
 
-void add_primary_service_cmd(uint8_t *buf) {
-  uint16_t service_handle;
+/**
+ * Add primary service to BLE stack and record mapping from SPI handle to BLE
+ * handle.
+ *
+ * Packet structure:
+ *
+ * +---0---+---1----+---2---+--3--+
+ * |Opcode | Handle | 2-byte UUID |
+ * +-------+--------+-------+-----+
+ *
+ * 2-byte UUID is is network order (lower byte first)
+ */
+void add_primary_service_cmd(uint8_t *req) {
+  uint8_t spi_handle = req[1];
+
   ble_uuid_t uuid;
   uuid.type = BLE_UUID_TYPE_BLE;
-  uuid.uuid = (uint16_t)buf[1] | (((uint16_t)buf[2]) << 8);
+  uuid.uuid = (uint16_t)req[2] | (((uint16_t)req[3]) << 8);
   APP_ERROR_CHECK(
-      sd_ble_gatts_service_add(BLE_GATTS_SERVICE_PRIMARY,
-                               &uuid, &service_handle));
+      sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY,
+                               &uuid, service_handles + spi_handle));
+}
+
+/**
+ * Add characteristic to service and record mapping from SPI handle to BLE
+ * handle.
+ *
+ * Packet structure:
+ *
+ * +------0------+------1------+------2------+------3------+------4------+
+ * |   Opcode    | Svc. Handle | Char Handle |         2-byte UUID       |
+ * +-------------+-------------+-------------+-------------+-------------+
+ *
+ * 2-byte UUID is is network order (lower byte first)
+ */
+void add_characteristic_cmd(uint8_t* req) {
+  uint8_t spi_svc_handle = req[1];
+  uint16_t service_handle = service_handles[spi_svc_handle];
+
+  uint8_t spi_char_handle = req[2];
+
+  ble_uuid_t uuid;
+  uuid.type = BLE_UUID_TYPE_BLE;
+  uuid.uuid = (uint16_t)req[3] | (((uint16_t)req[4]) << 8);
+
+  ble_gatts_attr_md_t attr_md;
+  BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
+  BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
+  attr_md.vlen = false;
+  attr_md.vloc = BLE_GATTS_VLOC_STACK;
+  attr_md.rd_auth = false;
+  attr_md.wr_auth = false;
+
+  ble_gatts_attr_t char_attr = {
+    .p_uuid = &uuid,
+    .p_attr_md = &attr_md,
+    .init_len = 0,
+    .init_offs = 0,
+    .max_len = 24,
+    .p_value = NULL
+  };
+
+  APP_ERROR_CHECK(
+      sd_ble_gatts_characteristic_add(service_handle, NULL, &char_attr,
+         char_handles + spi_char_handle));
+  nrf_gpio_pin_set(LED);
+  char* debug_cmd = "\xccSuccess!";
+  spi_enqueue_cmd((uint8_t*)debug_cmd, strlen(debug_cmd));
+  
 }
 
 void spi_handler(spi_slave_evt_t evt) {
   switch (evt.evt_type) {
     case SPI_SLAVE_BUFFERS_SET_DONE:
-      if (spi_tx_buf[0] != 0) {
+      if (spi_tx_cur[0] != 0) {
         nrf_gpio_pin_set(INT);
       }
       break;
@@ -160,18 +225,18 @@ void spi_handler(spi_slave_evt_t evt) {
         case SPI_STOP_ADVERTISING:
           APP_ERROR_CHECK(sd_ble_gap_adv_stop());
         case SPI_ADD_SERVICE:
-          add_primary_service(spi_rx_buf);
+          add_primary_service_cmd(spi_rx_buf);
+          break;
+        case SPI_ADD_CHARACTERISTIC:
+          add_characteristic_cmd(spi_rx_buf);
+          break;
         default:
           break;
       }
-      if (spi_txq_tail == spi_txq_head) {
-        spi_tx_buf[0] = 0;
-      } else {
-        spi_txq_head = (spi_txq_head + 1) % SPI_TX_QUEUE_SIZE;
-      }
+      spi_tx_cur = spi_dequeue_cmd();
       APP_ERROR_CHECK(spi_slave_buffers_set(
-            spi_tx_buf, spi_rx_buf,
-            sizeof(spi_tx_buf), sizeof(spi_rx_buf)));
+            spi_tx_cur, spi_rx_buf,
+            sizeof(SPI_PKT_LEN), sizeof(spi_rx_buf)));
       break;
     default:
       break;

@@ -1,3 +1,5 @@
+#include "tinyos_ble.h"
+
 interface NrfBleService
 {
   command error_t addCharacteristic(uuid_t UUID, uint8_t handle);

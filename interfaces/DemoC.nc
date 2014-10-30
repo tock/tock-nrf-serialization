@@ -25,6 +25,7 @@ implementation
 
   event void BlePeripheral.ready()
   {
+    call Observer.configure();
     call BlePeripheral.startAdvertising();
   }
 
