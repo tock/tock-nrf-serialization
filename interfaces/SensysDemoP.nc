@@ -57,6 +57,7 @@ module SensysDemoP
         interface FSAccelerometer;
         interface ForwardingTable;
         interface StdControl as RplControl;
+        interface StdControl as ScrufflesCtl;
 
         interface BlePeripheral;
         interface BleLocalService as Observer;
@@ -68,6 +69,7 @@ implementation
     struct sockaddr_in6 ble_dest;
     struct sockaddr_in6 nhop;
     bool do_data_tx;
+    uint32_t liveness_idx;
 
     bool shouldBeRoot()
     {
@@ -106,6 +108,7 @@ implementation
 
     event void Boot.booted()
     {
+        liveness_idx = 0;
         data_dest.sin6_port = htons(4410);
         ble_dest.sin6_port = htons(4411);
         call Timer.startPeriodic(DATA_TX_PERIOD);
@@ -118,11 +121,13 @@ implementation
         if (shouldBeRoot())
         {
             printf("Node configured to be root\n");
+            printf("\033[31;1mNOT ACTIVATING WATCHDOG\n\033[0m");
             call RootControl.setRoot();
         }
         else
         {
             printf("Node is not DODAG root\n");
+            call ScrufflesCtl.start();
         }
         loadDataTarget();
         call RadioControl.start();
@@ -187,6 +192,11 @@ implementation
         from_serial = (from_serial << 8) + from->sin6_addr.s6_addr[15];
         if (len == sizeof(node_data_t))
         {
+            struct sockaddr_in6 scruffles_addr;
+            scruffles_addr = *from;
+            scruffles_addr.sin6_port = htons(0xFF5);
+            liveness_idx++;
+            call DataSock.sendto(&scruffles_addr, &liveness_idx, 4);    
             printf("\033[32;1m");
             printf("Got a data struct from 0x%04x\n", from_serial);
             rx = (node_data_t*) data;

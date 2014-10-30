@@ -91,4 +91,7 @@ implementation
     SensysDemoP.BlePeripheral -> NrfBleP;
     SensysDemoP.Observer -> ObserverC;
 
+    //Screw this. Just reset if things don't go as planned
+    components ScrufflesC;
+    SensysDemoP.ScrufflesCtl -> ScrufflesC;
 }
