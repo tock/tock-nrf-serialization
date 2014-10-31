@@ -275,7 +275,7 @@ implementation
         ln += snprintf(buffer + ln, 1022-ln, "\t\"from\":\"0x%04x\"\n}>>\n", from);
         for (i = 0; i < v->len; i++)
         {
-            HelenaService.notify(v->idents[i], from);
+            call HelenaService.notify(v->idents[i], from);
         }
         atomic
         {
