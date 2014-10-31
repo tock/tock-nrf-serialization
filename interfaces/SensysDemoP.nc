@@ -167,10 +167,16 @@ implementation
         printf(" ");
         atomic
         {
-            if (adv_len < 32)
+            if (adv_len < 32 && dlen == 24 && data[dlen-2] == 'l')
             {
-                adv[adv_len] = data[dlen-2];
+                adv[adv_len] = data[dlen-1];
                 adv_len++;
+            }
+            else if (adv_len < 32)
+            {   //Not a squall, record anyway
+                printf("not squall: len=%d\n",dlen);
+               // adv[adv_len] = 0xFF;
+               // adv_len++;
             }
         }
         for (i = 0; i < dlen; i++) {
@@ -265,9 +271,12 @@ implementation
         ln = snprintf(buffer, 1022, "BSTRUCT<<{\n\t\"ids\":[");
         for (i = 0; i < v->len; i++)
         {
-            ln += snprintf(buffer + ln, 1022-ln, "%02d,");
+            if ( i!= 0 )
+                ln += snprintf(buffer + ln, 1022-ln, ",");
+            ln += snprintf(buffer + ln, 1022-ln, "\"%02d\"",v->idents[i]);
         }
-        ln = snprintf(buffer + ln, 1022-ln, "]\n}>>\n");
+        ln += snprintf(buffer + ln, 1022-ln, "],\n");
+        ln += snprintf(buffer + ln, 1022-ln, "\t\"from\":\"0x%04x\"\n}>>\n", from);
         atomic
         {
             printf(buffer);
@@ -316,9 +325,13 @@ implementation
             print_dstruct(rx, from_serial);
             printf("\033[0m\n");
         }
-        else
+        else if (len == sizeof(ble_data_t))
         {
-            printf("Got random data\n");
+            printf("fuckit, just treating it as BLE\n");
+            printf("\033[32;1m");
+            printf("Got a BLE struct from 0x%04x\n", from_serial);
+            print_blestruct((ble_data_t*) data, from_serial);
+            printf("\033[0m\n");
         }
     }
 
