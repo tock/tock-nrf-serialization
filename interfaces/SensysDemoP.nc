@@ -133,7 +133,7 @@ implementation
             printf("Node configured to be root\n");
             printf("\033[31;1mNOT ACTIVATING WATCHDOG\n\033[0m");
             call RootControl.setRoot();
-            call BlePeripheral.initialize();
+           // call BlePeripheral.initialize();
         }
         else
         {
@@ -223,14 +223,14 @@ implementation
             "\t\"mag_z\": %d,\n"
             "\t\"lux\"  : %d,\n"
             "\t\"ftlen\": %d,\n"
-            "\t[\n"
+            "\t\"ft\":[\n"
         ,from, v->acc_x, v->acc_y, v->acc_z, v->mag_x, v->mag_y, v->mag_z, v->lux, v->ftable_len);
         mx = v->ftable_len;
         if (mx > 8) mx = 8; 
         for (i = 0; i<mx; i++)
         {
             ln += snprintf(buffer+ln, 1022-ln,
-                "\t\t{\"r\":%04x,\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
+                "\t\t{\"r\":\"%04x\",\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
         }
         ln += snprintf(buffer+ln, 1022-ln, "\t]\n}>>\n");
         atomic{
@@ -260,7 +260,6 @@ implementation
         int i, ln;
         uint8_t buffer[1024];
         ln = snprintf(buffer, 1022, "BSTRUCT<<{\n\t\"ids\":[");
-        ln = printf("  ACC_X: %d\n",v->acc_x);
         for (i = 0; i < v->len; i++)
         {
             ln += snprintf(buffer + ln, 1022-ln, "%02d,");
@@ -284,7 +283,7 @@ implementation
             printf("\033[32;1m");
             printf("Got a BLE struct from 0x%04x\n", from_serial);
             rx = (ble_data_t*) data;
-            print_blestruct(rx);
+            print_blestruct(rx, from_serial);
             printf("\033[0m\n");
         }   
         else
