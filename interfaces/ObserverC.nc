@@ -12,7 +12,6 @@ implementation
 
   uuid_t myuuid = 0x2108;
 
-
   command error_t BleLocalService.configure() {
     call ObserverImpl.createService(myuuid);
     call ObserverImpl.addCharacteristic(0x2109,
