@@ -162,12 +162,11 @@ implementation
           printf(":%02x", addr[i]);
         }
         printf(" ");
-        //TODO do check for squall here
         atomic
         {
-            if (adv_len < 32 && dlen == 1)
+            if (adv_len < 32)
             {
-                adv[adv_len] = data[0]; //TODO change to squall's byte
+                adv[adv_len] = data[dlen-2];
                 adv_len++;
             }
         }
@@ -227,11 +226,12 @@ implementation
         ,from, v->acc_x, v->acc_y, v->acc_z, v->mag_x, v->mag_y, v->mag_z, v->lux, v->ftable_len);
         mx = v->ftable_len;
         if (mx > 8) mx = 8; 
-        for (i = 0; i<mx; i++)
-        {
-            ln += snprintf(buffer+ln, 1022-ln,
-                "\t\t{\"r\":\"%04x\",\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
-        }
+       // for (i = 0; i<mx; i++)
+       // {
+       //     ln += snprintf(buffer+ln, 1022-ln,
+       //         "\t\t{\"r\":\"%04x\",\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
+       //
+       // }
         ln += snprintf(buffer+ln, 1022-ln, "\t]\n}>>\n");
         atomic{
             printf(buffer);
@@ -341,7 +341,7 @@ implementation
                 }
                 adv_len = 0;
             }
-            call DataSock.sendto(&data_dest, &ble_packet, sizeof(ble_data_t));
+            call DataSock.sendto(&ble_dest, &ble_packet, sizeof(ble_data_t));
         }
         else
         {
