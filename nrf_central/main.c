@@ -55,14 +55,12 @@ uint8_t* spi_dequeue_cmd() {
  * return an error.
  */
 int spi_enqueue_cmd(uint8_t* cmd, size_t len) {
-  nrf_gpio_pin_clear(LED);
   if ((spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE == spi_txq_head) {
     return -1;
   }
   memcpy(spi_tx_queue[spi_txq_tail], cmd, len);
   spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
   if ((spi_txq_head + 1) % SPI_TX_QUEUE_SIZE == spi_txq_tail) {
-    nrf_gpio_pin_set(LED);
     spi_tx_cur = spi_dequeue_cmd();
     APP_ERROR_CHECK(spi_slave_buffers_set(
           spi_tx_cur, spi_rx_buf,
@@ -142,6 +140,7 @@ void ble_handler(ble_evt_t *evt) {
   uint8_t spi_cmd[32];
   switch(evt->header.evt_id) {
     case BLE_GAP_EVT_ADV_REPORT:
+      nrf_gpio_pin_toggle(LED);
       spi_notify_advertisement(evt->evt.gap_evt.params.adv_report);
       break;
     default:

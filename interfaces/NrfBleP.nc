@@ -46,11 +46,11 @@ implementation
       txbuf_tl = (txbuf_tl + 1) % 10;
       doSpi = txbuf_tl - txbuf_hd == 1 || txbuf_tl == 0 && txbuf_hd == 9;
     }
-    printf("Queue...\n");
+    //printf("Queue...\n");
 
 
     if (doSpi) {
-      printf("Posting...\n");
+      //printf("Posting...\n");
       post initSpi();
     }
 
