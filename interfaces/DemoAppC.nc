@@ -5,7 +5,7 @@ implementation
 {
 
   components MainC, NrfBleP, ObserverC, HplSam4lIOC;
-  components DemoPeripheralC;
+  components DemoCentralC;
   components new Sam4lUSART2C();
   components new SpiBleLocalCharC() as ObserverChar;
   components new SpiBleLocalServiceC() as ObserverImpl;
@@ -22,15 +22,16 @@ implementation
   NrfBleP.IntPort -> HplSam4lIOC.PA17;
   NrfBleP.Int -> HplSam4lIOC.PA17IRQ;
 
-  /*DemoCentralC.Boot -> MainC;
+  DemoCentralC.Boot -> MainC;
   DemoCentralC.BleCentral -> NrfBleP;
-  DemoCentralC.Led -> HplSam4lIOC.PC10;*/
+  DemoCentralC.Led -> HplSam4lIOC.PC10;
 
+    /*
   DemoPeripheralC.Boot -> MainC.Boot;
   DemoPeripheralC.BlePeripheral -> NrfBleP;
   DemoPeripheralC.Observer -> ObserverC;
   DemoPeripheralC.ObserverC -> ObserverChar;
   DemoPeripheralC.Led -> HplSam4lIOC.PC10;
-  DemoPeripheralC.Timer0 -> Timer0;
+  DemoPeripheralC.Timer0 -> Timer0;*/
 }
 
