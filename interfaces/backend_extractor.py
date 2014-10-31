@@ -27,7 +27,7 @@ def addFirestormReading(payload):
 def parse_data_struct(s):
     try:
         ds = simplejson.loads(s)
-        sensor_readings={'firestorm': ds["from"], 'acc_X':ds["acc_x"],'acc_Y':ds["acc_y"],'acc_Z':ds["acc_z"],'mag_X':ds["mag_x"],'mag_Y':ds["mag_y"],'mag_Z':ds["mag_z"],'light':ds["lux"]}
+        sensor_readings={'firestorm': str(ds["from"]), 'acc_X':str(ds["acc_x"]),'acc_Y':str(ds["acc_y"]),'acc_Z':str(ds["acc_z"]),'mag_X':str(ds["mag_x"]),'mag_Y':str(ds["mag_y"]),'mag_Z':str(ds["mag_z"]),'light':str(ds["lux"])}
         addFirestormReading(sensor_readings)
         #insert into the db
     except:
