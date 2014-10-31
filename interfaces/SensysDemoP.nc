@@ -64,8 +64,7 @@ module SensysDemoP
 
         //BLE Peripheral
         interface BlePeripheral;
-        interface BleLocalService as Observer;
-        interface BleLocalChar as ObserverC;
+        interface BleLocalService as HelenaBleService;
 
         // Helena
         interface HelenaService;
@@ -188,12 +187,10 @@ implementation
     // BLE PERIPHERAL
     event void BlePeripheral.ready()
     {
-        call Observer.configure();
+        call HelenaBleService.configure();
         call BlePeripheral.startAdvertising();
     }
-    event void ObserverC.onWrite(uint16_t len, uint8_t const *value) {}
-    event void ObserverC.indicateConfirmed() {}
-    event void ObserverC.timeout() {}
+
     event void BlePeripheral.connected()
     {
         printf("[[ BLE PERIPHERAL CONNECTED ]]\n");
