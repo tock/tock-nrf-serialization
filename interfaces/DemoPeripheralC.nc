@@ -24,7 +24,7 @@ implementation
   {
     call Led.makeOutput();
     call Led.clr();
-    call Timer0.startPeriodic(10000);
+    call Timer0.startPeriodic(3000);
     call BlePeripheral.initialize();
   }
 
@@ -37,6 +37,7 @@ implementation
   event void Timer0.fired()
   {
     call Led.toggle();  
+    printf("Notifying...\n");
     call ObserverC.notify(1, counter);
   }
 

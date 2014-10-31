@@ -33,18 +33,22 @@ implementation
 
   error_t enqueue_tx(uint8_t *req, uint8_t len) {
     if (len > SPI_PKT_LEN) {
+      printf("Too big!!");
       return FAIL;  
     }
 
-    if ((txbuf_hd - txbuf_hd) % 10 == 1) {
+    if (txbuf_hd - txbuf_tl == 1 || txbuf_hd == 0 && txbuf_tl == 9) {
+      printf("No room left %d %d!\n", txbuf_hd, txbuf_tl);
       return FAIL;
     }
+
+    printf("|Q| %d - %d = %d\n", txbuf_tl, txbuf_hd, (txbuf_tl - txbuf_hd) % 10);
 
     memcpy(txbufs[txbuf_tl], req, len);
     txbuf_tl = (txbuf_tl + 1) % 10;
 
-    if ((txbuf_tl - txbuf_hd) % 10 == 1) {
-      trace("Posting...\n");
+    if (txbuf_tl - txbuf_hd == 1 || txbuf_tl == 0 && txbuf_hd == 9) {
+      printf("Posting...\n");
       post initSpi();
     }
 
@@ -97,10 +101,14 @@ implementation
   command error_t BleLocalChar.notify[uint8_t handle](uint16_t len,
     uint8_t const *value)
   {
-    uint8_t txbuf[2];
+    uint8_t txbuf[SPI_PKT_LEN];
+    if (len > SPI_PKT_LEN - 2) {
+      return FAIL;  
+    }
     txbuf[0] = SPI_NOTIFY;
     txbuf[1] = handle;
-    return enqueue_tx(txbuf, sizeof(txbuf));
+    memcpy(txbuf + 2, value, len);
+    return enqueue_tx(txbuf, len + 2);
   }
 
   command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
@@ -187,7 +195,6 @@ implementation
     if (txbuf_hd == txbuf_tl) {
       return;
     }
-    trace("Initing spi...\n");
     txbuf_hd = (txbuf_hd + 1) % 10;
     call CS.clr();
     call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN);
@@ -219,7 +226,6 @@ implementation
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
     call CS.set();
-    trace("Opcode: ");
     if (error == SUCCESS) {
       printf("0x%x 0x%x\n", txBuf[0], rxBuf[0]);
       if (rxBuf[0] == 0xee) {
