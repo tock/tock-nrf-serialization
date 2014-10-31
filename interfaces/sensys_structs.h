@@ -20,8 +20,8 @@ typedef struct
 
 typedef struct
 {
-    uint8_t mac_addrs[8*4];
-    uint8_t counts[4];
+    uint8_t idents[32];
+    uint8_t len;
 } ble_data_t;
 
 #endif

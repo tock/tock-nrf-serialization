@@ -38,7 +38,7 @@
 #include <printf.h>
 #include "sensys_structs.h"
 
-#define DATA_TX_PERIOD 5000L
+#define DATA_TX_PERIOD 2500L
 
 module SensysDemoP
 {
@@ -59,8 +59,13 @@ module SensysDemoP
         interface StdControl as RplControl;
         interface StdControl as ScrufflesCtl;
 
+        //BLE Central
+        interface BleCentral;
+
+        //BLE Peripheral
         interface BlePeripheral;
         interface BleLocalService as Observer;
+        interface BleLocalChar as ObserverC;
     }
 }
 implementation
@@ -70,6 +75,10 @@ implementation
     struct sockaddr_in6 nhop;
     bool do_data_tx;
     uint32_t liveness_idx;
+    bool isBLEPacket;
+    ble_data_t ble_packet;
+    uint8_t adv [32];
+    uint8_t adv_len;
 
     bool shouldBeRoot()
     {
@@ -111,6 +120,7 @@ implementation
         liveness_idx = 0;
         data_dest.sin6_port = htons(4410);
         ble_dest.sin6_port = htons(4411);
+        isBLEPacket = FALSE;
         call Timer.startPeriodic(DATA_TX_PERIOD);
         call DataSock.bind(4410);
         call BLESock.bind(4411);
@@ -123,11 +133,13 @@ implementation
             printf("Node configured to be root\n");
             printf("\033[31;1mNOT ACTIVATING WATCHDOG\n\033[0m");
             call RootControl.setRoot();
+           // call BlePeripheral.initialize();
         }
         else
         {
             printf("Node is not DODAG root\n");
             call ScrufflesCtl.start();
+            call BleCentral.initialize();
         }
         loadDataTarget();
         call RadioControl.start();
@@ -135,14 +147,97 @@ implementation
         call BlePeripheral.initialize();
     }
 
+    // BLE CENTRAL
+    event void BleCentral.ready()
+    {
+        call BleCentral.scan();
+    }
+
+
+    async event void BleCentral.advReceived(uint8_t* addr,
+        uint8_t *data, uint8_t dlen, uint8_t rssi) {
+        int i;
+        printf("ADV: %02x", addr[5]);
+        for (i = 4; i >= 0; i--) {
+          printf(":%02x", addr[i]);
+        }
+        printf(" ");
+        //TODO do check for squall here
+        atomic
+        {
+            if (adv_len < 32 && dlen == 1)
+            {
+                adv[adv_len] = data[0]; //TODO change to squall's byte
+                adv_len++;
+            }
+        }
+        for (i = 0; i < dlen; i++) {
+          printf("%02x", data[i]);
+        }
+        printf(" rssi: %d\n", rssi);
+      }
+
+    // BLE PERIPHERAL
+    event void BlePeripheral.ready()
+    {
+        call Observer.configure();
+        call BlePeripheral.startAdvertising();
+    }
+    event void ObserverC.onWrite(uint16_t len, uint8_t const *value) {}
+    event void ObserverC.indicateConfirmed() {}
+    event void ObserverC.timeout() {}
+    event void BlePeripheral.connected()
+    {
+        printf("[[ BLE PERIPHERAL CONNECTED ]]\n");
+    }
+
+    event void BlePeripheral.disconnected()
+    {
+        printf("[[ BLE PERIPHERAL DISCONNECTED ]]\n");
+        call BlePeripheral.startAdvertising();
+    }
+
+    event void BlePeripheral.advertisingTimeout()
+    {
+        call BlePeripheral.startAdvertising();
+    }
+
+
     event void RadioControl.startDone(error_t e) {}
     event void RadioControl.stopDone(error_t e) {}
     event void SensorControl.startDone(error_t e) {}
     event void SensorControl.stopDone(error_t e) {}
 
-    void print_dstruct(node_data_t *v)
+    void print_dstruct(node_data_t *v, uint16_t from)
     {
-        int i, mx;
+        int i, mx, ln;
+        uint8_t buffer[1024]; //BECAUSE I HAVE SO MUCH RAM!!
+        ln = snprintf(buffer, 1022,
+        "DSTRUCT<<{\n"
+            "\t\"from\" : \"%04x\",\n"
+            "\t\"acc_x\": %d,\n"
+            "\t\"acc_y\": %d,\n"
+            "\t\"acc_z\": %d,\n"
+            "\t\"mag_x\": %d,\n"
+            "\t\"mag_y\": %d,\n"
+            "\t\"mag_z\": %d,\n"
+            "\t\"lux\"  : %d,\n"
+            "\t\"ftlen\": %d,\n"
+            "\t\"ft\":[\n"
+        ,from, v->acc_x, v->acc_y, v->acc_z, v->mag_x, v->mag_y, v->mag_z, v->lux, v->ftable_len);
+        mx = v->ftable_len;
+        if (mx > 8) mx = 8; 
+        for (i = 0; i<mx; i++)
+        {
+            ln += snprintf(buffer+ln, 1022-ln,
+                "\t\t{\"r\":\"%04x\",\"p\":%d,\"via\":\"X::%04x\"}\n", v->fdest[i], v->pfxlen[i], v->fnhop[i]);
+        }
+        ln += snprintf(buffer+ln, 1022-ln, "\t]\n}>>\n");
+        atomic{
+            printf(buffer);
+        }
+#if 0
+
         printf("  ACC_X: %d\n",v->acc_x);
         printf("  ACC_Y: %d\n",v->acc_y);
         printf("  ACC_Z: %d\n",v->acc_z);
@@ -157,8 +252,24 @@ implementation
         {
             printf("    - [%d]: X::%04x/%d via X::%04x\n", i, v->fdest[i], v->pfxlen[i], v->fnhop[i]);
         }
+#endif
+    }
 
-    } 
+    void print_blestruct(ble_data_t *v, uint16_t from)
+    {
+        int i, ln;
+        uint8_t buffer[1024];
+        ln = snprintf(buffer, 1022, "BSTRUCT<<{\n\t\"ids\":[");
+        for (i = 0; i < v->len; i++)
+        {
+            ln += snprintf(buffer + ln, 1022-ln, "%02d,");
+        }
+        ln = snprintf(buffer + ln, 1022-ln, "]\n}>>\n");
+        atomic
+        {
+            printf(buffer);
+        }
+    }
 
     event void BLESock.recvfrom(struct sockaddr_in6 *from, void *data,
                                 uint16_t len, struct ip6_metadata *meta)
@@ -172,7 +283,7 @@ implementation
             printf("\033[32;1m");
             printf("Got a BLE struct from 0x%04x\n", from_serial);
             rx = (ble_data_t*) data;
-           // print_blestruct(rx);
+            print_blestruct(rx, from_serial);
             printf("\033[0m\n");
         }   
         else
@@ -198,9 +309,8 @@ implementation
             liveness_idx++;
             call DataSock.sendto(&scruffles_addr, &liveness_idx, 4);    
             printf("\033[32;1m");
-            printf("Got a data struct from 0x%04x\n", from_serial);
             rx = (node_data_t*) data;
-            print_dstruct(rx);
+            print_dstruct(rx, from_serial);
             printf("\033[0m\n");
         }
         else
@@ -209,10 +319,9 @@ implementation
         }
     }
 
-
+    node_data_t tx;
     event void Timer.fired()
     {
-        node_data_t tx;
         struct route_entry *ft;
         int i;
         int max_size;
@@ -221,54 +330,51 @@ implementation
         if (!do_data_tx) return;
         call Led.toggle();
 
-        tx.acc_x = call FSAccelerometer.getAccelX();
-        tx.acc_y = call FSAccelerometer.getAccelY();
-        tx.acc_z = call FSAccelerometer.getAccelZ();
-        tx.mag_x = call FSAccelerometer.getMagnX();
-        tx.mag_y = call FSAccelerometer.getMagnY();
-        tx.mag_z = call FSAccelerometer.getMagnZ();
-        tx.lux = (uint16_t) call FSIlluminance.getVisibleLux();
-        ft = call ForwardingTable.getTable(&max_size);
-        valid_size = 0;
-        for (i = 0; i < max_size; i++)
+        if (isBLEPacket)
         {
-            if (!ft[i].valid) continue;
-            if (valid_size < 8)
+            atomic
             {
-                struct in6_addr ad;
-                ad = ft[i].prefix;
-                tx.fdest[valid_size] = ((uint16_t)ad.s6_addr[14] << 8) + ad.s6_addr[15];
-                ad = ft[i].next_hop;
-                tx.fnhop[valid_size] = ((uint16_t)ad.s6_addr[14] << 8) + ad.s6_addr[15];
-                tx.pfxlen[valid_size] = ft[i].prefixlen;
+                ble_packet.len = adv_len;
+                for (i=0;i<adv_len;i++)
+                {
+                    ble_packet.idents[i] = adv[i];
+                }
+                adv_len = 0;
             }
-            valid_size++;
+            call DataSock.sendto(&data_dest, &ble_packet, sizeof(ble_data_t));
         }
-        tx.ftable_len = valid_size;
-        call DataSock.sendto(&data_dest, &tx, sizeof(node_data_t));
+        else
+        {
+            tx.acc_x = call FSAccelerometer.getAccelX();
+            tx.acc_y = call FSAccelerometer.getAccelY();
+            tx.acc_z = call FSAccelerometer.getAccelZ();
+            tx.mag_x = call FSAccelerometer.getMagnX();
+            tx.mag_y = call FSAccelerometer.getMagnY();
+            tx.mag_z = call FSAccelerometer.getMagnZ();
+            tx.lux = (uint16_t) call FSIlluminance.getVisibleLux();
+            ft = call ForwardingTable.getTable(&max_size);
+            valid_size = 0;
+            for (i = 0; i < max_size; i++)
+            {
+                if (!ft[i].valid) continue;
+                if (valid_size < 8)
+                {
+                    struct in6_addr ad;
+                    ad = ft[i].prefix;
+                    tx.fdest[valid_size] = ((uint16_t)ad.s6_addr[14] << 8) + ad.s6_addr[15];
+                    ad = ft[i].next_hop;
+                    tx.fnhop[valid_size] = ((uint16_t)ad.s6_addr[14] << 8) + ad.s6_addr[15];
+                    tx.pfxlen[valid_size] = ft[i].prefixlen;
+                }
+                valid_size++;
+            }
+            tx.ftable_len = valid_size;
+            call DataSock.sendto(&data_dest, &tx, sizeof(node_data_t));
+        }
+        isBLEPacket = !isBLEPacket;
+
     }
-    
-    //BLE stuff
-    
-  event void BlePeripheral.ready()
-  {
-    call BlePeripheral.startAdvertising();
-  }
 
-  event void BlePeripheral.connected()
-  {
-    call Led.set();
-  }
-
-  event void BlePeripheral.disconnected()
-  {
-    call BlePeripheral.startAdvertising();
-  }
-
-  event void BlePeripheral.advertisingTimeout()
-  {
-    call BlePeripheral.startAdvertising();
-  }
 
 
 }

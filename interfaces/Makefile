@@ -2,7 +2,7 @@ COMPONENT=DemoAppC
 # uncomment this for network programming support
 # BOOTLOADER=tosboot
 
-SDB_PUBLISH_NAME=helena:sensys-1.0
+SDB_PUBLISH_NAME=helena:sensys-1.1
 #This is the helena signing key
 #If you do not have this key, get it from Michael
 SDB_PUBLISH_KEY=5ADE1428

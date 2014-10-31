@@ -89,7 +89,10 @@ implementation
     NrfBleP.Int -> HplSam4lIOC.PA17IRQ;
 
     SensysDemoP.BlePeripheral -> NrfBleP;
+    SensysDemoP.BleCentral -> NrfBleP;
     SensysDemoP.Observer -> ObserverC;
+    SensysDemoP.ObserverC -> ObserverChar;
+
 
     //Screw this. Just reset if things don't go as planned
     components ScrufflesC;
