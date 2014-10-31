@@ -26,7 +26,7 @@
  */
 
 #define SPI_PKT_LEN 50
-#define SPI_TX_QUEUE_SIZE 3
+#define SPI_TX_QUEUE_SIZE 4
 
 uint8_t spi_rx_buf[SPI_PKT_LEN];
 
@@ -55,12 +55,14 @@ uint8_t* spi_dequeue_cmd() {
  * return an error.
  */
 int spi_enqueue_cmd(uint8_t* cmd, size_t len) {
+  nrf_gpio_pin_clear(LED);
   if ((spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE == spi_txq_head) {
     return -1;
   }
   memcpy(spi_tx_queue[spi_txq_tail], cmd, len);
   spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
-  if ((spi_txq_tail - spi_txq_head) % SPI_TX_QUEUE_SIZE == 1) {
+  if ((spi_txq_head + 1) % SPI_TX_QUEUE_SIZE == spi_txq_tail) {
+    nrf_gpio_pin_set(LED);
     spi_tx_cur = spi_dequeue_cmd();
     APP_ERROR_CHECK(spi_slave_buffers_set(
           spi_tx_cur, spi_rx_buf,
