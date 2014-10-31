@@ -29,6 +29,7 @@ implementation
   DemoPeripheralC.Boot -> MainC.Boot;
   DemoPeripheralC.BlePeripheral -> NrfBleP;
   DemoPeripheralC.Observer -> ObserverC;
+  DemoPeripheralC.ObserverC -> ObserverChar;
   DemoPeripheralC.Led -> HplSam4lIOC.PC10;
   DemoPeripheralC.Timer0 -> Timer0;
 }
