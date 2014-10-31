@@ -66,6 +66,9 @@ module SensysDemoP
         interface BlePeripheral;
         interface BleLocalService as Observer;
         interface BleLocalChar as ObserverC;
+
+        // Helena
+        interface HelenaService;
     }
 }
 implementation

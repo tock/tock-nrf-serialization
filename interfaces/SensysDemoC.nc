@@ -41,6 +41,7 @@ implementation
 {
     components MainC, HplSam4lIOC;
     components SensysDemoP;
+    components HelenaServiceC;
 
     SensysDemoP.Boot -> MainC;
     SensysDemoP.Led -> HplSam4lIOC.PC10;
@@ -55,6 +56,7 @@ implementation
     SensysDemoP.DataSock -> DataSock;
     SensysDemoP.BLESock -> BLESock;
     SensysDemoP.Timer -> TimerMilliC;
+    SensysDemoP.HelenaService -> HelenaServiceC;
 
     components HplSam4lClockC;
     components UdpC, IPDispatchC;
