@@ -18,6 +18,8 @@
 #include "firestorm.h"
 #include "tinyos_ble.h"
 
+uint16_t conn_handle = BLE_CONN_HANDLE_INVALID; // empty value
+
 /*
  * The SPI tx buffers are structured in a queue implemented as a a ring-array.
  * When `spi_txq_head == spi_txq_tail`, there is nothing to send. Otherwise,
@@ -114,7 +116,7 @@ void app_error_handler(uint32_t error_code,
   simple_uart_putstring((const uint8_t*)"  ");
   simple_uart_put(error_code + 48);
   simple_uart_putstring((const uint8_t*)"\r\n");*/
-  uint8_t debug_cmd[10];
+  uint8_t debug_cmd[40];
   debug_cmd[0] = SPI_DEBUG;
   sprintf(debug_cmd + 1, "%d: %d", error_code, line_num);
   memcpy(spi_tx_queue[spi_txq_tail], debug_cmd, strlen(debug_cmd));
@@ -129,10 +131,12 @@ void ble_handler(ble_evt_t *evt) {
   uint8_t spi_cmd[1];
   switch(evt->header.evt_id) {
     case BLE_GAP_EVT_CONNECTED:
+      conn_handle = evt->evt.gap_evt.conn_handle;
       spi_cmd[0] = SPI_CONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
     case BLE_GAP_EVT_DISCONNECTED:
+      conn_handle = BLE_CONN_HANDLE_INVALID;
       spi_cmd[0] = SPI_DISCONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
@@ -205,6 +209,7 @@ void add_characteristic_cmd(uint8_t* req) {
   ble_gatts_char_md_t meta;
   memset(&meta, 0, sizeof(ble_gatts_char_md_t));
   meta.char_props.read          = 1;
+  meta.char_props.notify          = 1;
   meta.p_char_user_desc         = "Random";
   meta.char_user_desc_max_size  = strlen((char*) "Random");
   meta.char_user_desc_size      = strlen((char*) "Random");
@@ -212,6 +217,23 @@ void add_characteristic_cmd(uint8_t* req) {
   APP_ERROR_CHECK(sd_ble_gatts_characteristic_add(service_handle, &meta, &char_attr,
          char_handles + spi_char_handle));
   
+}
+
+void notify_cmd(uint8_t *rx_buf) {
+  if (conn_handle == BLE_CONN_HANDLE_INVALID) {
+    return;
+  }
+  uint8_t spi_handle = rx_buf[1];
+  uint16_t handle = char_handles[spi_handle].value_handle;
+  uint16_t len = (uint16_t)rx_buf[2];
+  ble_gatts_hvx_params_t hvx = {
+    .handle = handle,
+    .type = BLE_GATT_HVX_NOTIFICATION,
+    .offset = 0,
+    .p_len = &len,
+    .p_data = rx_buf + 3
+  };
+  APP_ERROR_CHECK(sd_ble_gatts_hvx(conn_handle, &hvx));
 }
 
 void spi_handler(spi_slave_evt_t evt) {
@@ -222,6 +244,7 @@ void spi_handler(spi_slave_evt_t evt) {
       }
       break;
     case SPI_SLAVE_XFER_DONE:
+      nrf_gpio_pin_toggle(LED);
       nrf_gpio_pin_clear(INT);
       switch (spi_rx_buf[0]) {
         case SPI_RESET: // Reset system
@@ -237,6 +260,9 @@ void spi_handler(spi_slave_evt_t evt) {
           break;
         case SPI_ADD_CHARACTERISTIC:
           add_characteristic_cmd(spi_rx_buf);
+          break;
+        case SPI_NOTIFY:
+          notify_cmd(spi_rx_buf);
           break;
         default:
           break;

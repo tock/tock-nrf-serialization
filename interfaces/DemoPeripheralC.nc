@@ -39,6 +39,7 @@ implementation
     call Led.toggle();  
     printf("Notifying...\n");
     call ObserverC.notify(1, counter);
+    counter[0]++;
   }
 
   event void ObserverC.onWrite(uint16_t len,

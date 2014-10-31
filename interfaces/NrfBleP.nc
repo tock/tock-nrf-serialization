@@ -33,16 +33,14 @@ implementation
 
   error_t enqueue_tx(uint8_t *req, uint8_t len) {
     if (len > SPI_PKT_LEN) {
-      printf("Too big!!");
       return FAIL;  
     }
 
     if (txbuf_hd - txbuf_tl == 1 || txbuf_hd == 0 && txbuf_tl == 9) {
-      printf("No room left %d %d!\n", txbuf_hd, txbuf_tl);
       return FAIL;
     }
 
-    printf("|Q| %d - %d = %d\n", txbuf_tl, txbuf_hd, (txbuf_tl - txbuf_hd) % 10);
+    printf("Queue...\n");
 
     memcpy(txbufs[txbuf_tl], req, len);
     txbuf_tl = (txbuf_tl + 1) % 10;
@@ -107,8 +105,9 @@ implementation
     }
     txbuf[0] = SPI_NOTIFY;
     txbuf[1] = handle;
-    memcpy(txbuf + 2, value, len);
-    return enqueue_tx(txbuf, len + 2);
+    txbuf[2] = len;
+    memcpy(txbuf + 3, value, len);
+    return enqueue_tx(txbuf, len + 3);
   }
 
   command error_t BleLocalChar.indicate[uint8_t handle](uint16_t len, uint8_t const *value) {
