@@ -136,7 +136,7 @@ implementation
             printf("Node configured to be root\n");
             printf("\033[31;1mNOT ACTIVATING WATCHDOG\n\033[0m");
             call RootControl.setRoot();
-           // call BlePeripheral.initialize();
+            call BlePeripheral.initialize();
         }
         else
         {
@@ -147,7 +147,6 @@ implementation
         loadDataTarget();
         call RadioControl.start();
 
-        call BlePeripheral.initialize();
     }
 
     // BLE CENTRAL
@@ -277,6 +276,10 @@ implementation
         }
         ln += snprintf(buffer + ln, 1022-ln, "],\n");
         ln += snprintf(buffer + ln, 1022-ln, "\t\"from\":\"0x%04x\"\n}>>\n", from);
+        for (i = 0; i < v->len; i++)
+        {
+            HelenaService.notify(v->idents[i], from);
+        }
         atomic
         {
             printf(buffer);
