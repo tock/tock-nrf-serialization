@@ -41,7 +41,6 @@ implementation
 {
     components MainC, HplSam4lIOC;
     components SensysDemoP;
-    components HelenaServiceC;
 
     SensysDemoP.Boot -> MainC;
     SensysDemoP.Led -> HplSam4lIOC.PC10;
@@ -76,13 +75,13 @@ implementation
     SensysDemoP.FSAccelerometer -> FireStormSensorsC;
 
     //BLE STUFF
-    components NrfBleP, ObserverC;
+    components NrfBleP, HelenaServiceC;
     components new Sam4lUSART2C() as NrfSPI;
-    components new SpiBleLocalCharC() as ObserverChar;
-    components new SpiBleLocalServiceC() as ObserverImpl;
+    components new SpiBleLocalCharC() as UUIDListedDevice;
+    components new SpiBleLocalServiceC() as HelenaBleService;
 
-    ObserverC.ObserverChar -> ObserverChar;
-    ObserverC.ObserverImpl -> ObserverImpl;
+    HelenaServiceC.UUIDListedDevice -> UUIDListedDevice;
+    HelenaServiceC.BLE -> HelenaBleService;
 
     NrfBleP.SpiPacket -> NrfSPI.SpiPacket;
     NrfBleP.SpiHPL -> NrfSPI;
@@ -92,8 +91,7 @@ implementation
 
     SensysDemoP.BlePeripheral -> NrfBleP;
     SensysDemoP.BleCentral -> NrfBleP;
-    SensysDemoP.Observer -> ObserverC;
-    SensysDemoP.ObserverC -> ObserverChar;
+    SensysDemoP.HelenaBleService -> HelenaServiceC;
 
 
     //Screw this. Just reset if things don't go as planned
