@@ -9,12 +9,12 @@ implementation
   components new Sam4lUSART2C();
   components new SpiBleLocalCharC() as ObserverChar;
   components new SpiBleLocalServiceC() as ObserverImpl;
-  components new TimerMilliC() as Timer0;
+  //components new TimerMilliC() as Timer0;
 
   components SerialPrintfC;
 
-  ObserverC.ObserverChar -> ObserverChar;
-  ObserverC.ObserverImpl -> ObserverImpl;
+/*  ObserverC.ObserverChar -> ObserverChar;
+  ObserverC.ObserverImpl -> ObserverImpl;*/
 
   NrfBleP.SpiPacket -> Sam4lUSART2C.SpiPacket;
   NrfBleP.SpiHPL -> Sam4lUSART2C;
@@ -26,8 +26,7 @@ implementation
   DemoCentralC.BleCentral -> NrfBleP;
   DemoCentralC.Led -> HplSam4lIOC.PC10;
 
-    /*
-  DemoPeripheralC.Boot -> MainC.Boot;
+  /*DemoPeripheralC.Boot -> MainC.Boot;
   DemoPeripheralC.BlePeripheral -> NrfBleP;
   DemoPeripheralC.Observer -> ObserverC;
   DemoPeripheralC.ObserverC -> ObserverChar;

@@ -32,21 +32,25 @@ implementation
   int txbuf_tl = 0;
 
   error_t enqueue_tx(uint8_t *req, uint8_t len) {
-    if (len > SPI_PKT_LEN) {
-      return FAIL;  
+    bool doSpi = 0;
+    atomic {
+      if (len > SPI_PKT_LEN) {
+        return FAIL;  
+      }
+
+      if (txbuf_hd - txbuf_tl == 1 || txbuf_hd == 0 && txbuf_tl == 9) {
+        return FAIL;
+      }
+
+      memcpy(txbufs[txbuf_tl], req, len);
+      txbuf_tl = (txbuf_tl + 1) % 10;
+      doSpi = txbuf_tl - txbuf_hd == 1 || txbuf_tl == 0 && txbuf_hd == 9;
     }
+    //printf("Queue...\n");
 
-    if (txbuf_hd - txbuf_tl == 1 || txbuf_hd == 0 && txbuf_tl == 9) {
-      return FAIL;
-    }
 
-    printf("Queue...\n");
-
-    memcpy(txbufs[txbuf_tl], req, len);
-    txbuf_tl = (txbuf_tl + 1) % 10;
-
-    if (txbuf_tl - txbuf_hd == 1 || txbuf_tl == 0 && txbuf_hd == 9) {
-      printf("Posting...\n");
+    if (doSpi) {
+      //printf("Posting...\n");
       post initSpi();
     }
 
@@ -190,11 +194,14 @@ implementation
   }
 
   task void initSpi() {
-    uint8_t *buf = txbufs[txbuf_hd];
-    if (txbuf_hd == txbuf_tl) {
-      return;
+    uint8_t *buf;
+    atomic {
+      buf = txbufs[txbuf_hd];
+      if (txbuf_hd == txbuf_tl) {
+        return;
+      }
+      txbuf_hd = (txbuf_hd + 1) % 10;
     }
-    txbuf_hd = (txbuf_hd + 1) % 10;
     call CS.clr();
     call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN);
   }
