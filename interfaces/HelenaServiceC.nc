@@ -24,7 +24,7 @@ implementation
 
     payload[0] = (uint8_t)(stormId >> 8);
     payload[1] = (uint8_t)(stormId & 0xff);
-    payload[2] = 0x55;
+    payload[2] = squallId;
 
     call UUIDListedDevice.notify(sizeof(payload), payload);
   }
