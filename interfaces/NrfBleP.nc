@@ -180,7 +180,7 @@ implementation
   async event void Int.fired()
   {
     uint8_t txbuf[1];
-    trace("Interrupt fired\n");
+    printf("Interrupt fired\n");
     txbuf[0] = SPI_NOOP;
     enqueue_tx(txbuf, sizeof(txbuf));
   }

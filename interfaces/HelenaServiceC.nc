@@ -10,12 +10,6 @@ module HelenaServiceC
 
 implementation
 {
-  typedef struct observation_packet {
-    uint8_t observer[6];
-    uint8_t observedMAC[6];
-    uint16_t observedManufactor;
-  } observation_packet_t; 
-
   uuid_t myuuid = 0x1978;
 
   command error_t BleLocalService.configure() {
@@ -26,16 +20,13 @@ implementation
   }
 
   command void HelenaService.notify(uint8_t squallId, uint16_t stormId) {
-    observation_packet_t pkt;
-    uint8_t mac[6];
-    uint8_t stormbuf[6];
+    uint8_t payload[3];
 
-    pkt.observedMAC[5] = squallId;
+    payload[0] = (uint8_t)(stormId >> 8);
+    payload[1] = (uint8_t)(stormId & 0xff);
+    payload[2] = 0x55;
 
-    pkt.observer[4] = (uint8_t)(stormId >> 8);
-    pkt.observer[5] = (uint8_t)stormId;
-
-    call UUIDListedDevice.notify(sizeof(pkt), (uint8_t*)(&pkt));
+    call UUIDListedDevice.notify(sizeof(payload), payload);
   }
 
   event void UUIDListedDevice.onWrite(uint16_t len, uint8_t const *value) {

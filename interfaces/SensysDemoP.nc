@@ -151,7 +151,7 @@ implementation
     // BLE CENTRAL
     event void BleCentral.ready()
     {
-        call BleCentral.scan();
+        //call BleCentral.scan();
     }
 
 
@@ -187,6 +187,7 @@ implementation
     event void BlePeripheral.ready()
     {
         call HelenaBleService.configure();
+        printf("Configured!\n");
         call BlePeripheral.startAdvertising();
     }
 
@@ -270,13 +271,15 @@ implementation
             if ( i!= 0 )
                 ln += snprintf(buffer + ln, 1022-ln, ",");
             ln += snprintf(buffer + ln, 1022-ln, "\"%02d\"",v->idents[i]);
+            printf("trying to notify\n");
+            call HelenaService.notify(v->idents[i], from);
         }
         ln += snprintf(buffer + ln, 1022-ln, "],\n");
         ln += snprintf(buffer + ln, 1022-ln, "\t\"from\":\"0x%04x\"\n}>>\n", from);
-        for (i = 0; i < v->len; i++)
+        /*for (i = 0; i < v->len; i++)
         {
             call HelenaService.notify(v->idents[i], from);
-        }
+        }*/
         atomic
         {
             printf(buffer);
