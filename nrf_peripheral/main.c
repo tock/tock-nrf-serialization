@@ -257,7 +257,6 @@ void spi_handler(spi_slave_evt_t evt) {
         case SPI_STOP_ADVERTISING:
           APP_ERROR_CHECK(sd_ble_gap_adv_stop());
         case SPI_ADD_SERVICE:
-          nrf_gpio_pin_set(LED);
           add_primary_service_cmd(spi_rx_buf);
           break;
         case SPI_ADD_CHARACTERISTIC:

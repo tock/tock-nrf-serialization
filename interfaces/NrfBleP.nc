@@ -156,7 +156,7 @@ implementation
     return SUCCESS;
   }
 
-  void initialize()
+  task void initialize()
   {
     uint8_t txbuf[1];
     txbuf[0] = SPI_RESET;
@@ -186,11 +186,11 @@ implementation
   }
 
   command void BlePeripheral.initialize() {
-    initialize();
+    post initialize();
   }
 
   command void BleCentral.initialize() {
-    initialize();
+    post initialize();
   }
 
   task void initSpi() {
@@ -203,7 +203,11 @@ implementation
       txbuf_hd = (txbuf_hd + 1) % 10;
     }
     call CS.clr();
-    call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN);
+    if (call SpiPacket.send(buf, rxbuf, SPI_PKT_LEN) == SUCCESS) {
+      printf("SpiPacket send SUCCESS\n");  
+    } else {
+      printf("SpiPacket send SUCCESS\n");  
+    }
   }
 
 
@@ -231,11 +235,11 @@ implementation
 
   async event void SpiPacket.sendDone(uint8_t* txBuf, uint8_t* rxBuf,
                                       uint16_t len, error_t error) {
+    printf("SpiPacket done 0x%x 0x%x\n", txBuf[0], rxBuf[0]);
     call CS.set();
     if (error == SUCCESS) {
-      printf("0x%x 0x%x\n", txBuf[0], rxBuf[0]);
       if (rxBuf[0] == 0xee) {
-        //printf("Retrying spi...\n");
+        printf("Retrying spi...\n");
         call CS.clr();
         call SpiPacket.send(txBuf, rxbuf, SPI_PKT_LEN);
         return;
