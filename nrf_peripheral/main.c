@@ -27,7 +27,7 @@ uint16_t conn_handle = BLE_CONN_HANDLE_INVALID; // empty value
  * enqueue the next command.
  */
 
-#define SPI_PKT_LEN 10
+#define SPI_PKT_LEN 50
 #define SPI_TX_QUEUE_SIZE 10
 
 uint8_t spi_rx_buf[SPI_PKT_LEN];
@@ -62,7 +62,7 @@ int spi_enqueue_cmd(uint8_t* cmd, size_t len) {
   }
   memcpy(spi_tx_queue[spi_txq_tail], cmd, len);
   spi_txq_tail = (spi_txq_tail + 1) % SPI_TX_QUEUE_SIZE;
-  if ((spi_txq_tail - spi_txq_head) % SPI_TX_QUEUE_SIZE == 1) {
+  if ((spi_txq_head + 1) % SPI_TX_QUEUE_SIZE == spi_txq_tail) {
     spi_tx_cur = spi_dequeue_cmd();
     APP_ERROR_CHECK(spi_slave_buffers_set(
           spi_tx_cur, spi_rx_buf,
@@ -131,11 +131,13 @@ void ble_handler(ble_evt_t *evt) {
   uint8_t spi_cmd[1];
   switch(evt->header.evt_id) {
     case BLE_GAP_EVT_CONNECTED:
+      nrf_gpio_pin_set(LED);
       conn_handle = evt->evt.gap_evt.conn_handle;
       spi_cmd[0] = SPI_CONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
       break;
     case BLE_GAP_EVT_DISCONNECTED:
+      nrf_gpio_pin_clear(LED);
       conn_handle = BLE_CONN_HANDLE_INVALID;
       spi_cmd[0] = SPI_DISCONNECT;
       spi_enqueue_cmd(spi_cmd, sizeof(spi_cmd));
@@ -244,7 +246,6 @@ void spi_handler(spi_slave_evt_t evt) {
       }
       break;
     case SPI_SLAVE_XFER_DONE:
-      nrf_gpio_pin_toggle(LED);
       nrf_gpio_pin_clear(INT);
       switch (spi_rx_buf[0]) {
         case SPI_RESET: // Reset system
@@ -256,6 +257,7 @@ void spi_handler(spi_slave_evt_t evt) {
         case SPI_STOP_ADVERTISING:
           APP_ERROR_CHECK(sd_ble_gap_adv_stop());
         case SPI_ADD_SERVICE:
+          nrf_gpio_pin_set(LED);
           add_primary_service_cmd(spi_rx_buf);
           break;
         case SPI_ADD_CHARACTERISTIC:
@@ -270,7 +272,7 @@ void spi_handler(spi_slave_evt_t evt) {
       spi_tx_cur = spi_dequeue_cmd();
       APP_ERROR_CHECK(spi_slave_buffers_set(
             spi_tx_cur, spi_rx_buf,
-            sizeof(SPI_PKT_LEN), sizeof(spi_rx_buf)));
+            SPI_PKT_LEN, sizeof(spi_rx_buf)));
       break;
     default:
       break;
