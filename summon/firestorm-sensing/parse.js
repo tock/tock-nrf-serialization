@@ -12,31 +12,25 @@ var parse_advertisement = function (advertisement, cb) {
                 var service_id = advertisement.manufacturerData.readUInt8(2);
                 if (manufacturer_id == 0x02E0 && service_id == 0x15) {
                     // OK! This looks like the right packet
+                    if (advertisement.manufacturerData.length > 4) {
+                        var version = advertisement.manufacturerData.readUInt8(3);
 
-                    if (advertisement.manufacturerData.length == 14) {
-                        var sensor_data = advertisement.manufacturerData.slice(3);
+                        if (version == 0) {
+                            var sensor_data = advertisement.manufacturerData.slice(4);
 
-                        var pressure = sensor_data.readUIntLE(0,4)/10;
-                        var humidity = sensor_data.readUIntLE(4,2)/100;
-                        var temp     = sensor_data.readUIntLE(6,2)/100;
-                        var light    = sensor_data.readUIntLE(8,2);
-                        var accel    = sensor_data.readUIntLE(10,1);
+                            // Initial packet
+                            if (sensor_data.length == 2) {
+                                var temp = sensor_data.readIntLE(0,2);
 
-                        var imm_accel = ((accel & 0xF0) != 0);
-                        var min_accel = ((accel & 0x0F) != 0);
+                                var out = {
+                                    device: 'FirestormSensing',
+                                    temperature_celcius: temp
+                                };
 
-                        var out = {
-                            device: 'BLEES',
-                            pressure_pascals: pressure,
-                            humidity_percent: humidity,
-                            temperature_celcius: temp,
-                            light_lux: light,
-                            acceleration_advertisement: imm_accel,
-                            acceleration_interval: min_accel
-                        };
-
-                        cb(out);
-                        return;
+                                cb(out);
+                                return;
+                            }
+                        }
                     }
                 }
             }
