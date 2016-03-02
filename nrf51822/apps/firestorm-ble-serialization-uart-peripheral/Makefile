@@ -6,10 +6,12 @@ APPLICATION_SRCS += softdevice_handler.c
 APPLICATION_SRCS += app_error.c
 APPLICATION_SRCS += app_scheduler_serconn.c
 APPLICATION_SRCS += app_timer.c
+APPLICATION_SRCS += app_gpiote.c
 
 APPLICATION_SRCS += nrf_assert.c
 APPLICATION_SRCS += nrf_delay.c
 APPLICATION_SRCS += nrf_drv_common.c
+APPLICATION_SRCS += nrf_drv_gpiote.c
 
 APPLICATION_SRCS += ble_advdata.c
 APPLICATION_SRCS += ble_conn_params.c

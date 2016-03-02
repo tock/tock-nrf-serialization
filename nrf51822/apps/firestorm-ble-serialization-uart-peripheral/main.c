@@ -24,6 +24,7 @@
 #include "nrf_soc.h"
 #include "app_error.h"
 #include "app_scheduler.h"
+#include "app_gpiote.h"
 #include "softdevice_handler.h"
 #include "ser_hal_transport.h"
 #include "ser_conn_handlers.h"
@@ -33,12 +34,24 @@
 #include "boards.h"
 #include "led.h"
 
+// Need this for the app_gpiote library
+app_gpiote_user_id_t gpiote_user;
+
+#define SW_RESET_PIN 19
+
+void interrupt_handler (uint32_t pins_l2h, uint32_t pins_h2l) {
+    if (pins_h2l & (1 << SW_RESET_PIN)) {
+        // Reset the nRF51822
+        NVIC_SystemReset();
+    }
+}
+
 /**@brief Main function of the connectivity application. */
 int main(void)
 {
     uint32_t err_code = NRF_SUCCESS;
 
-#if ( defined(SER_PHY_HCI_DEBUG_ENABLE) || defined(SER_PHY_DEBUG_APP_ENABLE))
+#if (defined(SER_PHY_HCI_DEBUG_ENABLE) || defined(SER_PHY_DEBUG_APP_ENABLE))
     debug_init(NULL);
 #endif
 
@@ -50,11 +63,7 @@ int main(void)
     /* Initialize SoftDevice.
      * SoftDevice Event IRQ is not scheduled but immediately copies BLE events to the application
      * scheduler queue */
-// #ifdef BOARD_WT51822
     SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_RC_250_PPM_8000MS_CALIBRATION, false);
-// #else
-    // SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, NULL);
-// #endif
 
     /* Subscribe for BLE events. */
     err_code = softdevice_ble_evt_handler_set(ser_conn_ble_event_handle);
@@ -66,6 +75,22 @@ int main(void)
 
     led_init(LED_0);
     led_off(LED_0);
+
+    // Setup a GPIO interrupt to use as the !RESET PIN.
+    // Normally the application MCU should use the actual reset pin, but
+    // that is not available on our hardware.
+
+    // For 1 users of GPIOTE
+    APP_GPIOTE_INIT(1);
+
+    // Register us as one user
+    app_gpiote_user_register(&gpiote_user,
+                             1<<SW_RESET_PIN,   // Which pins we want the interrupt for low to high
+                             1<<SW_RESET_PIN,   // Which pins we want the interrupt for high to low
+                             interrupt_handler);
+
+    // Ready to go!
+    app_gpiote_user_enable(gpiote_user);
 
     /* Enter main loop. */
     for (;;)
