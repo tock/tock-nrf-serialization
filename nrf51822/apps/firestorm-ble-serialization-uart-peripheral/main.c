@@ -32,7 +32,10 @@
 #include "ser_phy_debug_comm.h"
 
 #include "boards.h"
+
+#ifdef LEDS
 #include "led.h"
+#endif
 
 // Need this for the app_gpiote library
 app_gpiote_user_id_t gpiote_user;
@@ -73,8 +76,10 @@ int main(void)
     err_code = ser_hal_transport_open(ser_conn_hal_transport_event_handle);
     APP_ERROR_CHECK(err_code);
 
+#ifdef LEDS
     led_init(LED_0);
     led_off(LED_0);
+#endif
 
     // Setup a GPIO interrupt to use as the !RESET PIN.
     // Normally the application MCU should use the actual reset pin, but
@@ -105,7 +110,9 @@ int main(void)
         err_code = ser_conn_rx_process();
         APP_ERROR_CHECK(err_code);
 
+#ifdef LEDS
         led_toggle(LED_0);
+#endif
 
         /* Sleep waiting for an application event. */
         err_code = sd_app_evt_wait();

@@ -176,3 +176,5 @@ SERIALIZATION_MODE = connectivity
 
 NRF_BASE_PATH ?= ../../nrf5x-base
 include $(NRF_BASE_PATH)/make/Makefile
+
+debug: CFLAGS += -DLEDS
