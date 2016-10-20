@@ -139,7 +139,8 @@ APPLICATION_SRCS += ble_struct_serialization.c
 
 APPLICATION_SRCS += ser_conn_cmd_decoder.c
 APPLICATION_SRCS += ser_conn_dtm_cmd_decoder.c
-APPLICATION_SRCS += ser_conn_error_handling.c
+# We would rather handle errors ourselves
+#APPLICATION_SRCS += ser_conn_error_handling.c
 APPLICATION_SRCS += ser_conn_event_encoder.c
 APPLICATION_SRCS += ser_conn_handlers.c
 APPLICATION_SRCS += ser_conn_pkt_decoder.c

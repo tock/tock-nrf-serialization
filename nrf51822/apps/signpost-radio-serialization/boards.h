@@ -8,3 +8,5 @@
 #define SER_CON_RTS_PIN             10   // UART Request To Send pin number.
 
 #define LED_0          18
+#define LED_1          19
+#define LED_2          20

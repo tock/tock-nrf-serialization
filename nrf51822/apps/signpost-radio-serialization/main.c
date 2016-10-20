@@ -33,6 +33,7 @@
 
 #include "boards.h"
 
+#define LEDS true
 #ifdef LEDS
 #include "led.h"
 #endif
@@ -47,6 +48,20 @@ void interrupt_handler (uint32_t pins_l2h, uint32_t pins_h2l) {
         // Reset the nRF51822
         NVIC_SystemReset();
     }
+}
+
+// make errors evident to anyone watching
+void app_error_handler(uint32_t error_code, uint32_t line_num, const uint8_t* p_file_name) {
+
+    led_init(LED_0);
+    led_init(LED_1);
+    led_init(LED_2);
+
+    led_on(LED_0);
+    led_on(LED_1);
+    led_on(LED_2);
+
+    while(1);
 }
 
 /**@brief Main function of the connectivity application. */
