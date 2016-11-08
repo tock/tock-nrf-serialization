@@ -162,7 +162,7 @@ APPLICATION_SRCS += led.c
 
 
 RAM_KB = 16
-FLASK_KB = 128
+FLASH_KB = 256
 
 
 # APPLICATION_SRCS += simple_ble.c
