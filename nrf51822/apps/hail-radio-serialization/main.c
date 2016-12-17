@@ -32,29 +32,15 @@
 #include "ser_phy_debug_comm.h"
 
 #include "boards.h"
+#define DEBUG_LEDS false
 
-#define LEDS true
-#ifdef LEDS
-#include "led.h"
-#endif
-
-// Need this for the app_gpiote library
-app_gpiote_user_id_t gpiote_user;
-
-#define SW_RESET_PIN 19
-
-void interrupt_handler (uint32_t pins_l2h, uint32_t pins_h2l) {
-    if (pins_h2l & (1 << SW_RESET_PIN)) {
-        // Reset the nRF51822
-        NVIC_SystemReset();
-    }
-}
 
 // make errors evident to anyone watching
 void app_error_handler(uint32_t error_code, uint32_t line_num, const uint8_t* p_file_name) {
 
     led_init(LED_0);
 
+    // this is the same blink pattern that panic! in Tock uses
     volatile int i;
     while (1) {
         led_on(LED_0);
@@ -76,10 +62,6 @@ int main(void)
 {
     uint32_t err_code = NRF_SUCCESS;
 
-#if (defined(SER_PHY_HCI_DEBUG_ENABLE) || defined(SER_PHY_DEBUG_APP_ENABLE))
-    debug_init(NULL);
-#endif
-
     /* Force constant latency mode to control SPI slave timing */
     NRF_POWER->TASKS_CONSTLAT = 1;
 
@@ -98,26 +80,10 @@ int main(void)
     err_code = ser_hal_transport_open(ser_conn_hal_transport_event_handle);
     APP_ERROR_CHECK(err_code);
 
-#ifdef LEDS
+#ifdef DEBUG_LEDS
     led_init(LED_0);
     led_off(LED_0);
 #endif
-
-    // Setup a GPIO interrupt to use as the !RESET PIN.
-    // Normally the application MCU should use the actual reset pin, but
-    // that is not available on our hardware.
-
-    // For 1 users of GPIOTE
-    APP_GPIOTE_INIT(1);
-
-    // Register us as one user
-    app_gpiote_user_register(&gpiote_user,
-                             1<<SW_RESET_PIN,   // Which pins we want the interrupt for low to high
-                             1<<SW_RESET_PIN,   // Which pins we want the interrupt for high to low
-                             interrupt_handler);
-
-    // Ready to go!
-    app_gpiote_user_enable(gpiote_user);
 
     /* Enter main loop. */
     for (;;)
@@ -132,7 +98,7 @@ int main(void)
         err_code = ser_conn_rx_process();
         APP_ERROR_CHECK(err_code);
 
-#ifdef LEDS
+#ifdef DEBUG_LEDS
         led_toggle(LED_0);
 #endif
 
