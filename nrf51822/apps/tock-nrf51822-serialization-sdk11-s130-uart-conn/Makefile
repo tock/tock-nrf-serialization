@@ -6,12 +6,10 @@ APPLICATION_SRCS += softdevice_handler.c
 APPLICATION_SRCS += app_error.c
 APPLICATION_SRCS += app_scheduler_serconn.c
 APPLICATION_SRCS += app_timer.c
-APPLICATION_SRCS += app_gpiote.c
 
 APPLICATION_SRCS += nrf_assert.c
 APPLICATION_SRCS += nrf_delay.c
 APPLICATION_SRCS += nrf_drv_common.c
-APPLICATION_SRCS += nrf_drv_gpiote.c
 
 APPLICATION_SRCS += ble_advdata.c
 APPLICATION_SRCS += ble_conn_params.c
@@ -111,7 +109,17 @@ APPLICATION_SRCS += ble_l2cap_tx.c
 APPLICATION_SRCS += ble_opt_get.c
 APPLICATION_SRCS += ble_opt_id_pre_decoder.c
 APPLICATION_SRCS += ble_opt_set.c
-APPLICATION_SRCS += ble_tx_buffer_count_get.c
+APPLICATION_SRCS += ble_tx_packet_count_get.c
+APPLICATION_SRCS += ble_gap_lesc_oob_data_set.c
+APPLICATION_SRCS += ble_gap_lesc_oob_data_get.c
+APPLICATION_SRCS += ble_gattc_attr_info_discover.c
+APPLICATION_SRCS += nrf_soc_struct_serialization.c
+APPLICATION_SRCS += ble_gap_evt_key_pressed.c
+APPLICATION_SRCS += ble_gattc_evt_attr_info_disc_rsp.c
+APPLICATION_SRCS += ble_gap_lesc_dhkey_reply.c
+APPLICATION_SRCS += ble_gap_evt_lesc_dhkey_request.c
+APPLICATION_SRCS += ble_gap_keypress_notify.c
+APPLICATION_SRCS += ecb_block_encrypt.c
 APPLICATION_SRCS += ble_user_mem_reply.c
 APPLICATION_SRCS += ble_uuid_decode.c
 APPLICATION_SRCS += ble_uuid_encode.c
@@ -139,7 +147,8 @@ APPLICATION_SRCS += ble_struct_serialization.c
 
 APPLICATION_SRCS += ser_conn_cmd_decoder.c
 APPLICATION_SRCS += ser_conn_dtm_cmd_decoder.c
-APPLICATION_SRCS += ser_conn_error_handling.c
+# We would rather handle errors ourselves
+#APPLICATION_SRCS += ser_conn_error_handling.c
 APPLICATION_SRCS += ser_conn_event_encoder.c
 APPLICATION_SRCS += ser_conn_handlers.c
 APPLICATION_SRCS += ser_conn_pkt_decoder.c
@@ -158,23 +167,46 @@ APPLICATION_SRCS += app_util_platform.c
 
 APPLICATION_SRCS += led.c
 
+# Hack so you can do `make imix`, etc.
+TOCK_BOARD=$(firstword $(MAKECMDGOALS))
 
 
+RAM_KB ?= 32
+FLASH_KB ?= 256
+
+# Custom settings for each platform
+ifeq ($(TOCK_BOARD), hail)
+else ifeq ($(TOCK_BOARD), imix)
+else ifeq ($(TOCK_BOARD), storm)
+APPLICATION_SRCS += app_gpiote.c
+APPLICATION_SRCS += nrf_drv_gpiote.c
 RAM_KB = 16
 FLASH_KB = 256
+else ifeq ($(TOCK_BOARD), signpost_radio)
+endif
 
 
-# APPLICATION_SRCS += simple_ble.c
-# APPLICATION_SRCS += eddystone.c
+ifneq ($(TOCK_BOARD), )
+BOARD = $(TOCK_BOARD)
+CFLAGS += -DTOCK_BOARD=$(TOCK_BOARD)
+OUTPUT_PATH = _build/$(TOCK_BOARD)/
+endif
 
 LIBRARY_PATHS += . ../../include
 SOURCE_PATHS += ../../src
 
-SOFTDEVICE_MODEL = s110
+SOFTDEVICE_MODEL = s130
+SDK_VERSION = 11
 
 SERIALIZATION_MODE = connectivity
 
 NRF_BASE_PATH ?= ../../nrf5x-base
 include $(NRF_BASE_PATH)/make/Makefile
 
-debug: CFLAGS += -DLEDS
+hail: all
+storm: all
+imix: all
+signpost_radio: all
+
+
+debug: CFLAGS += -DDEBUG_LEDS
