@@ -1,5 +1,0 @@
-r
-loadbin _build/nrf_central_s120.bin 00018000
-r
-g
-exit
